@@ -1,7 +1,10 @@
 version: "3.9"
+
 services:
   db:
     image: postgis/postgis:16-3.4
+    container_name: flood_db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: flood
       POSTGRES_USER: flood_user
@@ -10,13 +13,27 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
       - ../db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flood_user -d flood"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
+    container_name: flood_redis
+    restart: unless-stopped
     ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   minio:
     image: minio/minio:latest
+    container_name: flood_minio
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -24,9 +41,28 @@ services:
     ports: ["9000:9000", "9001:9001"]
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin123 &&
+      mc mb -p local/flood-artifacts || true
+      "
 
   tiles:
     image: kartoza/geoserver:2.24.2
+    container_name: flood_tiles
+    restart: unless-stopped
     environment:
       GEOSERVER_ADMIN_USER: admin
       GEOSERVER_ADMIN_PASSWORD: geoserver
@@ -34,12 +70,27 @@ services:
 
   api:
     image: ghcr.io/your-org/flood-api:latest
-    depends_on: [db, redis, minio, tiles]
+    container_name: flood_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      tiles:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql://flood_user:flood_pass@db:5432/flood
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET: flood-artifacts
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin123
+      TILE_BASE_URL: http://tiles:8080/geoserver
     ports: ["8080:8080"]
 
 volumes:

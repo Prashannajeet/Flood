@@ -1,23 +1,22 @@
 # Flood Modeling Platform Artifacts
 
-This repository contains implementation-ready architecture artifacts for moving to the final recommendation: a production-oriented **.NET Windows Worker Service** for HEC-RAS run orchestration, while keeping interfaces compatible with local on-prem deployment and future online migration.
+This repository provides production-focused architecture assets for a web-enabled HEC-RAS platform using the final recommendation: **Windows-hosted .NET workers** with an API-driven orchestration layer.
 
-## Included Deliverables
+## Deliverables
 
-- `openapi/openapi.yaml`: Complete API contract (OpenAPI 3.0.3).
-- `db/migrations/*.sql`: Versioned PostgreSQL/PostGIS migration files.
-- `deploy/docker-compose.yml`: On-prem pilot compose stack (API, DB, MinIO, Redis, tile service).
-- `docs/appendix-e-worker-implementation.md`: .NET-first implementation skeleton and rollout notes.
+- `openapi/openapi.yaml`: OpenAPI 3.0.3 contract for auth, projects/scenarios, run orchestration, results, and worker callbacks.
+- `db/migrations/*.sql`: Versioned Postgres/PostGIS schema migrations for core entities, run tracking, artifacts, and indexes.
+- `deploy/docker-compose.yml`: On-prem pilot stack for API dependencies (PostGIS, Redis, MinIO, GeoServer).
+- `docs/appendix-e-worker-implementation.md`: .NET worker implementation and operational guidance.
 
-## Quick Start
-
-1. Review API contract in `openapi/openapi.yaml`.
-2. Apply migrations from `db/migrations` using your migration tool.
-3. Launch pilot stack:
+## Quick Start (Pilot)
 
 ```bash
 cd deploy
 docker compose up -d
 ```
 
-4. Deploy Windows .NET workers per `docs/appendix-e-worker-implementation.md`.
+Then:
+1. Apply/verify DB migrations from `db/migrations`.
+2. Point your API service to the compose dependencies.
+3. Deploy Windows .NET workers using the Appendix E guidance.
