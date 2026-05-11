@@ -69,7 +69,9 @@ services:
     ports: ["8081:8080"]
 
   api:
-    image: ghcr.io/your-org/flood-api:latest
+    build:
+      context: ../services/api
+      dockerfile: Dockerfile
     container_name: flood_api
     restart: unless-stopped
     depends_on:
