@@ -26,3 +26,17 @@ Then:
 - `services/api/`: API vertical-slice scaffold and behavior contract.
 - `services/worker-dotnet/`: .NET worker scaffold docs + example settings.
 - `scripts/smoke-test.sh`: end-to-end run lifecycle smoke-test script (for when API is implemented/running).
+
+## Demo Application (New)
+
+A lightweight demo app is now included:
+- Seed data: `db/seed/001_demo_seed.sql`
+- Fake async worker: `scripts/fake-worker.py`
+- Browser UI: `services/demo-ui/index.html`
+- One-command launcher: `scripts/run-demo.sh`
+
+Demo flow:
+1. Start stack + API.
+2. Seed demo IDs.
+3. Submit run from UI.
+4. Fake worker updates progress/logs and marks completion.

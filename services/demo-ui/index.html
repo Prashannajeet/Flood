@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Flood Demo UI</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .row { margin-bottom: 12px; }
+    pre { background: #111; color: #0f0; padding: 10px; min-height: 120px; }
+  </style>
+</head>
+<body>
+  <h2>Flood Run Demo</h2>
+  <div class="row"><button onclick="submitRun()">Submit Demo Run</button></div>
+  <div class="row">Run ID: <span id="runId">-</span></div>
+  <div class="row">Status: <span id="status">-</span></div>
+  <div class="row">Progress: <span id="progress">-</span></div>
+  <h3>Logs</h3>
+  <pre id="logs"></pre>
+
+<script>
+const API = 'http://localhost:8080/api/v1';
+let currentRunId = null;
+let poller = null;
+
+async function submitRun() {
+  const res = await fetch(`${API}/runs`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      project_id: '00000000-0000-0000-0000-000000000001',
+      scenario_id: '00000000-0000-0000-0000-000000000001',
+      input_artifact_ids: ['00000000-0000-0000-0000-000000000001'],
+      priority: 'normal'
+    })
+  });
+  const data = await res.json();
+  currentRunId = data.run_id;
+  document.getElementById('runId').textContent = currentRunId;
+  startPolling();
+}
+
+function startPolling() {
+  if (poller) clearInterval(poller);
+  poller = setInterval(async () => {
+    if (!currentRunId) return;
+    const r = await fetch(`${API}/runs/${currentRunId}`);
+    const run = await r.json();
+    document.getElementById('status').textContent = run.status;
+    document.getElementById('progress').textContent = run.progress_pct;
+
+    const l = await fetch(`${API}/runs/${currentRunId}/logs?offset=0&limit=50`);
+    const logs = await l.json();
+    document.getElementById('logs').textContent = logs.entries.map(e => `${e.ts} [${e.level}] ${e.message}`).join('\n');
+
+    if (run.status === 'SUCCEEDED' || run.status === 'FAILED') clearInterval(poller);
+  }, 1500);
+}
+</script>
+</body>
+</html>
