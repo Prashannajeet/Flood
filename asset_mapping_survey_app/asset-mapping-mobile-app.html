@@ -26,6 +26,7 @@
       --risk: #ba3d34;
       --warn: #bd7f1d;
       --shadow: 0 18px 42px rgba(23, 32, 31, 0.16);
+      --mobile-app-height: 200vh;
     }
 
     * { box-sizing: border-box; }
@@ -47,7 +48,7 @@
 
     .phone {
       width: min(430px, 100%);
-      min-height: 100vh;
+      min-height: var(--mobile-app-height);
       margin: 0 auto;
       background: #fbfaf6;
       position: relative;
@@ -727,7 +728,7 @@
 
     @media (min-width: 720px) {
       body { display: grid; place-items: start center; padding: 22px 0; }
-      .phone { min-height: calc(100vh - 44px); border-radius: 18px; overflow: hidden; }
+      .phone { min-height: calc((100vh - 44px) * 2); border-radius: 18px; overflow: hidden; }
       .bottom-nav { bottom: 22px; border-radius: 0 0 18px 18px; }
     }
   </style>
