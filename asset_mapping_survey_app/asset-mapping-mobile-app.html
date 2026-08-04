@@ -629,7 +629,7 @@
           </div>
         </div>
 
-        <div class="map-panel" aria-label="OpenStreetMap asset map">
+        <div class="map-panel" aria-label="ArcGIS Online asset map">
           <div class="map" id="assetMap"></div>
           <div class="map-toolbar">
             <span class="chip" id="gpsChip">GPS 21.1498, 79.0806</span>
@@ -982,7 +982,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const STORAGE_KEY = "assetMappingRecordsV2";
+    const STORAGE_KEY = "assetMappingRecordsV3";
     const DRAFT_KEY = "assetMappingDraftV2";
     const MEDIA_KEY = "assetMappingMediaV2";
     const CLOUD_CONFIG_KEY = "assetMappingSupabaseConfigV1";
@@ -990,12 +990,7 @@
     const PHOTO_BUCKET = "asset-photos";
     const DEFAULT_SUPABASE_URL = "https://lagrhtwsomtwvwkhtchg.supabase.co";
 
-    const seedRecords = [
-      { id: "AM-2026-001", projectName: "Mohanpura", type: "Dam", name: "Spillway gate bay 3", lat: "21.1498", lng: "79.0806", chainage: "Dam axis", span: "120 m", condition: "Good", issue: "Minor seepage mark near inspection gallery.", media: ["GATE"], control: { type: "DGPS BM", id: "BM-DAM-01", name: "Mohanpura BM near spillway", surveyorName: "Field Survey Team A", northing: "2340156.482", easting: "508342.116", ellipsoidalHeight: "340.782 m", elevation: "312.428 m", verticalDatum: "MSL", dgpsAccuracy: "H 12 mm, V 18 mm", observationTime: "60 min static", droneFlightId: "FLT-DAM-01", droneAltitude: "80 m / 2.8 cm GSD", description: "Concrete pillar on left abutment, protected and intervisible with spillway." }, createdAt: "2026-08-04T05:40:00.000Z" },
-      { id: "AM-2026-002", projectName: "Mohanpura", type: "Road", name: "Road crossing over nala", lat: "21.1503", lng: "79.0812", chainage: "Km 2.700", span: "2 lane", condition: "Critical", issue: "Approach scouring observed on downstream side.", media: ["ROAD"], control: { type: "DGPS TBM", id: "TBM-RD-02", name: "Mohanpura nala crossing TBM", surveyorName: "Field Survey Team A", northing: "2340204.775", easting: "508407.338", ellipsoidalHeight: "334.221 m", elevation: "306.115 m", verticalDatum: "Project datum", dgpsAccuracy: "H 18 mm, V 30 mm", observationTime: "45 min static", droneFlightId: "FLT-NALA-02", droneAltitude: "70 m / 2.2 cm GSD", description: "Paint mark on culvert parapet; use for nala crossing section control." }, createdAt: "2026-08-04T05:45:00.000Z" },
-      { id: "AM-2026-003", projectName: "Kundaliya", type: "River", name: "Left bank pitching", lat: "21.1489", lng: "79.0797", chainage: "Reach 0.800", span: "0.8 km", condition: "Watch", issue: "Stone displacement and local bank erosion.", media: ["BANK"], control: { type: "Drone GCP", id: "GCP-RP-03", name: "Kundaliya river GCP 03", surveyorName: "Drone Survey Team B", northing: "2339948.220", easting: "508248.903", ellipsoidalHeight: "333.108 m", elevation: "304.870 m", verticalDatum: "MSL", dgpsAccuracy: "H 15 mm, V 24 mm", observationTime: "30 min rapid static", droneFlightId: "FLT-RIVER-02", droneAltitude: "90 m / 3.1 cm GSD", description: "Checker target placed above flood mark for bank protection orthomosaic." }, createdAt: "2026-08-04T05:50:00.000Z" },
-      { id: "AM-2026-004", projectName: "Kundaliya", type: "Canal", name: "Canal aqueduct RD 4.250", lat: "21.1511", lng: "79.0821", chainage: "RD 4.250", span: "18 m", condition: "Watch", issue: "Railing missing on left side.", media: ["AQU"], control: { type: "Drone Checkpoint", id: "CHK-CA-04", name: "Kundaliya canal checkpoint 04", surveyorName: "Drone Survey Team B", northing: "2340291.640", easting: "508499.442", ellipsoidalHeight: "337.004 m", elevation: "309.350 m", verticalDatum: "Canal project datum", dgpsAccuracy: "H 20 mm, V 35 mm", observationTime: "20 min RTK check", droneFlightId: "FLT-CANAL-01", droneAltitude: "75 m / 2.6 cm GSD", description: "Checkpoint on downstream apron, independent from GCP set." }, createdAt: "2026-08-04T05:55:00.000Z" }
-    ];
+    const seedRecords = [];
 
     const colors = { Dam: "#59686f", Road: "#b45f31", River: "#1c7d99", Canal: "#2f8f67", Control: "#123a43" };
     const icons = { Dam: "DM", Road: "RD", River: "RP", Canal: "CA", Control: "CP" };
@@ -1324,16 +1319,16 @@
 
     function initializeMap() {
       if (typeof L === "undefined") {
-        el("assetMap").innerHTML = `<div class="empty">OpenStreetMap could not load. Check internet access and refresh.</div>`;
+        el("assetMap").innerHTML = `<div class="empty">ArcGIS Online map could not load. Check internet access and refresh.</div>`;
         return;
       }
       map = L.map("assetMap", {
         zoomControl: true,
         attributionControl: true
       }).setView([21.1498, 79.0806], 15);
-      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const streetLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+        attribution: "Tiles &copy; Esri"
       }).addTo(map);
       const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
@@ -1344,7 +1339,7 @@
         attribution: "Labels &copy; Esri"
       });
       const satelliteWithLabels = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({ "OpenStreetMap": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(map);
+      L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(map);
       assetLayer = L.layerGroup().addTo(map);
       renderMapMarkers();
       setTimeout(() => map.invalidateSize(), 120);
@@ -1359,9 +1354,9 @@
         zoomControl: true,
         attributionControl: true
       }).setView([21.1498, 79.0806], 15);
-      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const streetLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+        attribution: "Tiles &copy; Esri"
       }).addTo(detailMap);
       const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
@@ -1372,7 +1367,7 @@
         attribution: "Labels &copy; Esri"
       });
       const satelliteWithLabels = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({ "OpenStreetMap": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(detailMap);
+      L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(detailMap);
       detailLayer = L.layerGroup().addTo(detailMap);
       setTimeout(() => detailMap.invalidateSize(), 120);
     }
@@ -1386,9 +1381,9 @@
         zoomControl: true,
         attributionControl: true
       }).setView([21.1498, 79.0806], 16);
-      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const streetLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+        attribution: "Tiles &copy; Esri"
       }).addTo(controlPointMap);
       const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
@@ -1399,7 +1394,7 @@
         attribution: "Labels &copy; Esri"
       });
       const satelliteHybrid = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({ "OpenStreetMap": streetLayer, "ArcGIS Satellite Hybrid": satelliteHybrid }, {}, { collapsed: true }).addTo(controlPointMap);
+      L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteHybrid }, {}, { collapsed: true }).addTo(controlPointMap);
       controlPointLayer = L.layerGroup().addTo(controlPointMap);
       setTimeout(() => controlPointMap.invalidateSize(), 120);
     }
