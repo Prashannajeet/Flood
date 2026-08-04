@@ -58,10 +58,13 @@ For hosted Streamlit deployment, add these repository or deployment secrets:
 
 ```text
 SUPABASE_URL=https://lagrhtwsomtwvwkhtchg.supabase.co
-SUPABASE_ANON_KEY=<paste Supabase public or publishable key>
+SUPABASE_SECRET_KEY=<paste Supabase sb_secret key for hosted Streamlit>
+SUPABASE_ANON_KEY=<optional public or publishable key fallback>
 ```
 
-Use the public/publishable client key only. Do not store a `service_role`, `sb_secret_*`, or database password in browser-facing pages.
+Use `SUPABASE_SECRET_KEY` only in server-side deployment secrets such as Streamlit Cloud or GitHub Actions. Do not paste `sb_secret_*`, `service_role`, or database passwords into browser-facing pages such as the mobile HTML app.
+
+The mobile web app still needs a public/publishable key on the device for direct browser sync.
 
 For Streamlit Community Cloud, add the same values in the app's Secrets settings. For local development, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and fill in the key.
 

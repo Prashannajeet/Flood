@@ -106,15 +106,15 @@ def secret_value(name: str, default: str = "") -> str:
         return default
 
 
-def fetch_records(supabase_url: str, anon_key: str) -> tuple[list[dict[str, Any]], str]:
-    if not supabase_url or not anon_key:
-        return [], "Add Supabase URL and public/publishable key, then press Refresh."
+def fetch_records(supabase_url: str, api_key: str) -> tuple[list[dict[str, Any]], str]:
+    if not supabase_url or not api_key:
+        return [], "Add Supabase URL and a deployment API key, then press Refresh."
 
     base = supabase_url.rstrip("/")
     endpoint = f"{base}/rest/v1/{CLOUD_TABLE}"
     headers = {
-        "apikey": anon_key,
-        "Authorization": f"Bearer {anon_key}",
+        "apikey": api_key,
+        "Authorization": f"Bearer {api_key}",
         "Accept": "application/json",
     }
     params = {"select": "*", "order": "updated_at.desc"}
@@ -362,17 +362,19 @@ def render_dashboard() -> None:
                 value=secret_value("SUPABASE_URL", DEFAULT_SUPABASE_URL),
             )
         with col2:
-            anon_key = st.text_input(
-                "Supabase public / publishable key",
-                value=secret_value("SUPABASE_ANON_KEY", ""),
+            secret_key = secret_value("SUPABASE_SECRET_KEY", "")
+            fallback_key = secret_value("SUPABASE_ANON_KEY", "")
+            api_key = st.text_input(
+                "Supabase server key",
+                value=secret_key or fallback_key,
                 type="password",
-                help="Use the public/publishable client key. Do not use service-role or secret keys here.",
+                help="For hosted Streamlit, use SUPABASE_SECRET_KEY in deployment secrets. Public/publishable keys also work for read access.",
             )
         with col3:
             refresh = st.button("Refresh", type="primary", use_container_width=True)
 
     if "dashboard_rows" not in st.session_state or refresh:
-        rows, error = fetch_records(supabase_url, anon_key)
+        rows, error = fetch_records(supabase_url, api_key)
         st.session_state.dashboard_rows = rows
         st.session_state.dashboard_error = error
         st.session_state.dashboard_refreshed_at = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
