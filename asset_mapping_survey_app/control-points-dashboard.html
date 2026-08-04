@@ -416,7 +416,7 @@
       </div>
       <div class="top-actions">
         <a class="btn" href="./asset-mapping-mobile-app.html?v=control-tab">Open mobile app</a>
-        <button class="btn" type="button" id="loadCloud">Load Supabase</button>
+        <button class="btn" type="button" id="loadCloud">Refresh online report</button>
         <button class="btn primary" type="button" id="downloadCsv">Download CSV</button>
       </div>
     </header>
@@ -554,6 +554,7 @@
     let MapView;
     let GraphicsLayer;
     let Graphic;
+    let onlineRefreshTimer = null;
 
     const el = (id) => document.getElementById(id);
 
@@ -580,21 +581,22 @@
       });
     }
 
-    async function loadCloudRecords() {
+    async function loadCloudRecords({ silent = false } = {}) {
       const client = getSupabaseClient();
       if (!client) {
-        el("mapStatus").textContent = "Save Supabase connection in mobile app first";
-        return;
+        if (!silent) el("mapStatus").textContent = "Save Supabase connection in mobile app first";
+        return false;
       }
-      el("mapStatus").textContent = "Loading Supabase records...";
+      if (!silent) el("mapStatus").textContent = "Refreshing online report...";
       const { data, error } = await client.from(CLOUD_TABLE).select("*").order("updated_at", { ascending: false });
       if (error) {
-        el("mapStatus").textContent = error.message || "Supabase load failed";
-        return;
+        el("mapStatus").textContent = silent ? "Online report refresh failed" : error.message || "Online report refresh failed";
+        return false;
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrateControlRecords((data || []).map(cloudRowToRecord))));
-      el("mapStatus").textContent = `${data.length} records loaded from Supabase`;
+      el("mapStatus").textContent = `${data.length} records loaded from online report`;
       render();
+      return true;
     }
 
     function normalizeRecord(record) {
@@ -757,6 +759,10 @@
             if (hit) selectRecord(hit.graphic.attributes.id);
           });
           render();
+          loadCloudRecords({ silent: true });
+          if (!onlineRefreshTimer) {
+            onlineRefreshTimer = window.setInterval(() => loadCloudRecords({ silent: true }), 60000);
+          }
         });
       }, () => {
         el("controlMap").innerHTML = `<div class="empty">ArcGIS Online map could not load. Check internet access and refresh.</div>`;

@@ -57,6 +57,9 @@ execute function public.set_field_records_updated_at();
 
 alter table public.field_records enable row level security;
 
+grant usage on schema public to anon, authenticated;
+grant select, insert, update on public.field_records to anon, authenticated;
+
 -- Demo policies for the current browser-based prototype.
 -- For production, replace these with authenticated user/role policies.
 drop policy if exists "Prototype read field records" on public.field_records;

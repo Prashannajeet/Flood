@@ -939,13 +939,13 @@
 
       <section class="screen" id="screen-export">
         <div class="section-title">
-          <h2>Cloud + Export</h2>
+          <h2>Online Report + Export</h2>
           <span>Supabase repository</span>
         </div>
         <form class="cloud-panel" id="cloudForm">
           <div class="cloud-status">
-            <span id="cloudStatus">Cloud database not connected</span>
-            <span id="cloudRecordCount">0 records synced</span>
+            <span id="cloudStatus">Online report not connected</span>
+            <span id="cloudRecordCount">0 local records</span>
           </div>
           <div class="field">
             <label for="supabaseUrl">Supabase project URL</label>
@@ -957,9 +957,9 @@
           </div>
           <div class="actions">
             <button class="btn secondary" type="submit">Save connection</button>
-            <button class="btn primary" type="button" id="syncCloud">Sync to cloud</button>
+            <button class="btn primary" type="button" id="syncCloud">Post pending online</button>
           </div>
-          <button class="btn secondary full" type="button" id="loadCloudRecords">Load from cloud</button>
+          <button class="btn secondary full" type="button" id="loadCloudRecords">Refresh online report</button>
         </form>
         <div class="card export-box">
           <div class="summary">
@@ -1071,9 +1071,9 @@
       if (el("supabaseUrl")) el("supabaseUrl").value = config.url || "";
       if (el("supabaseAnonKey")) el("supabaseAnonKey").value = config.anonKey || "";
       const ready = Boolean(config.url && config.anonKey);
-      el("cloudStatus").textContent = message || (ready ? "Cloud database connected" : "Cloud database not connected");
+      el("cloudStatus").textContent = message || (ready ? "Online report connected" : "Online report not connected");
       el("cloudRecordCount").textContent = `${records.length} local record${records.length === 1 ? "" : "s"}`;
-      el("syncLabel").textContent = ready ? "Cloud ready" : "Offline ready";
+      el("syncLabel").textContent = ready ? "Online report ready" : "Offline ready";
     }
 
     function base64ToBlob(dataUrl) {
@@ -1155,21 +1155,34 @@
       return true;
     }
 
+    async function postRecordToOnlineReport(record, label = "Record") {
+      if (!getSupabaseClient()) {
+        refreshCloudPanel("Saved locally; online report not connected");
+        showToast(`${label} saved locally; add Supabase key to post online`);
+        return false;
+      }
+      refreshCloudPanel(`Posting ${label.toLowerCase()} online...`);
+      await syncRecordToCloud(record);
+      refreshCloudPanel(`${label} posted to online report`);
+      showToast(`${label} posted to online report`);
+      return true;
+    }
+
     async function syncAllToCloud() {
       const client = getSupabaseClient();
       if (!client) {
         showToast("Save Supabase connection first");
         return;
       }
-      el("cloudStatus").textContent = "Syncing records to cloud...";
+      el("cloudStatus").textContent = "Posting records to online report...";
       let synced = 0;
       for (const record of records) {
         await syncRecordToCloud(record);
         synced += 1;
-        el("cloudRecordCount").textContent = `${synced}/${records.length} synced`;
+        el("cloudRecordCount").textContent = `${synced}/${records.length} posted`;
       }
-      refreshCloudPanel(`${synced} records synced to Supabase`);
-      showToast("Cloud sync complete");
+      refreshCloudPanel(`${synced} records posted to online report`);
+      showToast("Online report updated");
     }
 
     async function loadRecordsFromCloud() {
@@ -1178,11 +1191,11 @@
         showToast("Save Supabase connection first");
         return;
       }
-      el("cloudStatus").textContent = "Loading records from cloud...";
+      el("cloudStatus").textContent = "Refreshing online report...";
       const { data, error } = await client.from(CLOUD_TABLE).select("*").order("updated_at", { ascending: false });
       if (error) {
-        showToast(error.message || "Could not load cloud records");
-        refreshCloudPanel("Cloud load failed");
+        showToast(error.message || "Could not refresh online report");
+        refreshCloudPanel("Online report refresh failed");
         return;
       }
       records = migrateControlRecords((data || []).map(cloudRowToRecord));
@@ -1193,8 +1206,8 @@
       renderControlScreen();
       renderMapMarkers();
       renderDetail();
-      refreshCloudPanel(`${records.length} records loaded from Supabase`);
-      showToast("Cloud records loaded");
+      refreshCloudPanel(`${records.length} records loaded from online report`);
+      showToast("Online report refreshed");
     }
 
     function loadRecords() {
@@ -2039,11 +2052,12 @@
       renderControlScreen();
       renderRecords();
       renderDetail();
-      showToast("Control point saved");
+      showToast("Control point saved locally");
       try {
-        if (await syncRecordToCloud(record)) showToast("Control point synced to cloud");
+        await postRecordToOnlineReport(record, "Control point");
       } catch (error) {
-        showToast(error.message || "Saved locally; cloud sync failed");
+        refreshCloudPanel("Online report post failed");
+        showToast(error.message || "Saved locally; online report post failed");
       }
     });
 
@@ -2108,11 +2122,12 @@
       renderMapMarkers();
       renderDetail();
       resetForm();
-      showToast("Survey record submitted");
+      showToast("Survey record saved locally");
       try {
-        if (await syncRecordToCloud(record)) showToast("Survey record synced to cloud");
+        await postRecordToOnlineReport(record, "Survey record");
       } catch (error) {
-        showToast(error.message || "Saved locally; cloud sync failed");
+        refreshCloudPanel("Online report post failed");
+        showToast(error.message || "Saved locally; online report post failed");
       }
       switchScreen("detail");
     });
@@ -2174,20 +2189,20 @@
         url: cloudForm.elements.supabaseUrl.value.trim(),
         anonKey: cloudForm.elements.supabaseAnonKey.value.trim()
       });
-      showToast("Cloud connection saved");
+      showToast("Online report connection saved");
     });
 
     el("syncCloud").addEventListener("click", () => {
       syncAllToCloud().catch((error) => {
-        refreshCloudPanel("Cloud sync failed");
-        showToast(error.message || "Cloud sync failed");
+        refreshCloudPanel("Online report post failed");
+        showToast(error.message || "Online report post failed");
       });
     });
 
     el("loadCloudRecords").addEventListener("click", () => {
       loadRecordsFromCloud().catch((error) => {
-        refreshCloudPanel("Cloud load failed");
-        showToast(error.message || "Cloud load failed");
+        refreshCloudPanel("Online report refresh failed");
+        showToast(error.message || "Online report refresh failed");
       });
     });
 
