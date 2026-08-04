@@ -7,6 +7,7 @@ Mobile-first asset mapping and DGPS control point survey app for dam, road, rive
 - `asset-mapping-mobile-app.html` - Field survey app with GPS, camera capture, Leaflet maps, Supabase sync, and export.
 - `control-points-dashboard.html` - Control point dashboard with map, table, filters, and CSV export.
 - `streamlit_app.py` - Streamlit wrapper for hosting the survey app and dashboard.
+- `streamlit_dashboard.py` - Dashboard-only Streamlit entry point for publishing the control point dashboard directly.
 - `requirements-streamlit.txt` - Streamlit hosting dependency file.
 - `supabase-postgis-setup.sql` - Supabase PostgreSQL + PostGIS setup script.
 - `asset-mapping-sw.js`, `asset-mapping.webmanifest`, `asset-mapping-icon.svg` - PWA/offline support files.
@@ -31,6 +32,12 @@ Run:
 
 ```bash
 streamlit run streamlit_app.py
+```
+
+Run the dashboard-only app:
+
+```bash
+streamlit run streamlit_dashboard.py
 ```
 
 ## Supabase Setup
