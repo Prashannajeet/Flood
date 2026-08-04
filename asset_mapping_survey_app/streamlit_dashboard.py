@@ -108,7 +108,7 @@ def secret_value(name: str, default: str = "") -> str:
 
 def fetch_records(supabase_url: str, anon_key: str) -> tuple[list[dict[str, Any]], str]:
     if not supabase_url or not anon_key:
-        return [], "Add Supabase URL and anon public key, then press Refresh."
+        return [], "Add Supabase URL and public/publishable key, then press Refresh."
 
     base = supabase_url.rstrip("/")
     endpoint = f"{base}/rest/v1/{CLOUD_TABLE}"
@@ -363,9 +363,10 @@ def render_dashboard() -> None:
             )
         with col2:
             anon_key = st.text_input(
-                "Supabase anon public key",
+                "Supabase public / publishable key",
                 value=secret_value("SUPABASE_ANON_KEY", ""),
                 type="password",
+                help="Use the public/publishable client key. Do not use service-role or secret keys here.",
             )
         with col3:
             refresh = st.button("Refresh", type="primary", use_container_width=True)

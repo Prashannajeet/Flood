@@ -1033,8 +1033,9 @@
             <input id="supabaseUrl" name="supabaseUrl" placeholder="https://your-project.supabase.co">
           </div>
           <div class="field">
-            <label for="supabaseAnonKey">Supabase anon public key</label>
-            <input id="supabaseAnonKey" name="supabaseAnonKey" placeholder="Paste anon key">
+            <label for="supabaseAnonKey">Supabase public / publishable key</label>
+            <input id="supabaseAnonKey" name="supabaseAnonKey" placeholder="Paste public key once">
+            <p class="muted" style="margin:4px 0 0;font-size:11px;">Required once on this device for online sync. Do not paste service-role or secret keys.</p>
           </div>
           <div class="actions">
             <button class="btn secondary" type="submit">Save connection</button>
@@ -1145,6 +1146,18 @@
       const config = loadCloudConfig();
       if (!config.url || !config.anonKey || !window.supabase?.createClient) return null;
       return window.supabase.createClient(config.url, config.anonKey);
+    }
+
+    function promptForCloudConnection() {
+      switchScreen("export");
+      refreshCloudPanel("Save Supabase public key once to start online sync");
+      window.setTimeout(() => {
+        const keyInput = el("supabaseAnonKey");
+        if (keyInput) {
+          keyInput.focus();
+          keyInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 80);
     }
 
     function syncSummary() {
@@ -1308,8 +1321,8 @@
     async function syncAllToCloud({ onlyPending = false } = {}) {
       const client = getSupabaseClient();
       if (!client) {
-        refreshCloudPanel("Online report not connected - save Supabase key");
-        showToast("Save Supabase connection first");
+        promptForCloudConnection();
+        showToast("Save Supabase public key once");
         return { synced: 0, failed: syncSummary().pending + syncSummary().failed, reason: "not_connected" };
       }
       const recordsToPost = onlyPending ? records.filter((record) => record.syncStatus !== "online") : records;
@@ -1345,7 +1358,8 @@
     async function loadRecordsFromCloud() {
       const client = getSupabaseClient();
       if (!client) {
-        showToast("Save Supabase connection first");
+        promptForCloudConnection();
+        showToast("Save Supabase public key once");
         return;
       }
       el("cloudStatus").textContent = "Refreshing online report...";
@@ -2377,8 +2391,7 @@
 
     el("mobileSyncNow").addEventListener("click", async () => {
       try {
-        const result = await syncAllToCloud({ onlyPending: true });
-        if (result?.reason === "not_connected") switchScreen("export");
+        await syncAllToCloud({ onlyPending: true });
       } catch (error) {
         refreshCloudPanel("Online report post failed");
         showToast(error.message || "Online report post failed");
