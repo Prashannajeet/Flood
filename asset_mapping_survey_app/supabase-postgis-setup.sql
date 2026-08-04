@@ -38,6 +38,17 @@ create index if not exists field_records_control_idx
 create index if not exists field_records_geom_idx
   on public.field_records using gist (geom);
 
+-- Optional dashboard editing metadata. The web dashboard also stores these
+-- inside payload so existing deployments keep working before this SQL is rerun.
+alter table public.field_records
+  add column if not exists editor_user_id text,
+  add column if not exists allowed_editor_ids text[] not null default '{}'::text[],
+  add column if not exists last_edited_by text,
+  add column if not exists last_edited_at timestamptz;
+
+create index if not exists field_records_editor_idx
+  on public.field_records (editor_user_id);
+
 create or replace function public.set_field_records_updated_at()
 returns trigger
 language plpgsql
@@ -61,7 +72,8 @@ grant usage on schema public to anon, authenticated;
 grant select, insert, update on public.field_records to anon, authenticated;
 
 -- Demo policies for the current browser-based prototype.
--- For production, replace these with authenticated user/role policies.
+-- For production, replace these with Supabase Auth + RLS policies that enforce
+-- editor_user_id/allowed_editor_ids using auth.uid() or user profile mappings.
 drop policy if exists "Prototype read field records" on public.field_records;
 create policy "Prototype read field records"
 on public.field_records for select
