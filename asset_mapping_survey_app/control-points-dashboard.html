@@ -577,10 +577,22 @@
 
     function loadCloudConfig() {
       try {
-        return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
+        const saved = JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}");
+        const key = saved.anonKey && !String(saved.anonKey).startsWith("sb_secret_") ? saved.anonKey : DEFAULT_SUPABASE_PUBLIC_KEY;
+        return { url: saved.url || DEFAULT_SUPABASE_URL, anonKey: key };
       } catch {
         return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY };
       }
+    }
+
+    function cloudErrorMessage(error) {
+      const message = error?.message || String(error || "");
+      const code = error?.code || "";
+      if (code === "PGRST205" || message.includes("field_records") || message.includes("schema cache")) {
+        return "Database setup pending: run supabase-postgis-setup.sql in Supabase SQL Editor";
+      }
+      if (message.includes("permission denied") || code === "42501") return "Database permission pending: run the Supabase setup SQL grants";
+      return message || "Online report refresh failed";
     }
 
     function saveCloudConfig(config) {
@@ -629,7 +641,7 @@
       if (!silent) el("mapStatus").textContent = "Refreshing online report...";
       const { data, error } = await client.from(CLOUD_TABLE).select("*").order("updated_at", { ascending: false });
       if (error) {
-        el("mapStatus").textContent = silent ? "Online report refresh failed" : error.message || "Online report refresh failed";
+        el("mapStatus").textContent = cloudErrorMessage(error);
         return false;
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrateControlRecords((data || []).map(cloudRowToRecord))));

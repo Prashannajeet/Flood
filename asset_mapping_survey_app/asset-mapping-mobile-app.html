@@ -1132,10 +1132,27 @@
 
     function loadCloudConfig() {
       try {
-        return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
+        const saved = JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}");
+        const key = saved.anonKey && !String(saved.anonKey).startsWith("sb_secret_") ? saved.anonKey : DEFAULT_SUPABASE_PUBLIC_KEY;
+        return { url: saved.url || DEFAULT_SUPABASE_URL, anonKey: key };
       } catch {
         return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY };
       }
+    }
+
+    function cloudErrorMessage(error) {
+      const message = error?.message || String(error || "");
+      const code = error?.code || "";
+      if (code === "PGRST205" || message.includes("field_records") || message.includes("schema cache")) {
+        return "Database setup pending: run supabase-postgis-setup.sql in Supabase SQL Editor";
+      }
+      if (message.includes("permission denied") || code === "42501") {
+        return "Database permission pending: run the Supabase setup SQL grants";
+      }
+      if (message.includes("Invalid API key") || message.includes("JWT")) {
+        return "Supabase key rejected: check project URL and publishable key";
+      }
+      return message || "Online report sync failed";
     }
 
     function saveCloudConfig(config) {
@@ -1311,7 +1328,7 @@
         await syncRecordToCloud(record);
         markRecordSyncState(record.id, "online");
       } catch (error) {
-        markRecordSyncState(record.id, "failed", error.message || "Online report post failed");
+        markRecordSyncState(record.id, "failed", cloudErrorMessage(error));
         throw error;
       }
       refreshCloudPanel(`${label} posted to online report`);
@@ -1344,15 +1361,17 @@
             synced += 1;
           } catch (error) {
             failed += 1;
-            markRecordSyncState(record.id, "failed", error.message || "Online report post failed");
+            markRecordSyncState(record.id, "failed", cloudErrorMessage(error));
           }
           el("cloudRecordCount").textContent = `${synced}/${recordsToPost.length} posted`;
         }
       } finally {
         if (el("mobileSyncNow")) el("mobileSyncNow").classList.remove("syncing");
       }
-      refreshCloudPanel(failed ? `${synced} posted, ${failed} failed` : `${synced} records posted to online report`);
-      showToast(failed ? "Some records still need retry" : "Online report updated");
+      const failedRecord = recordsToPost.find((record) => record.syncStatus === "failed");
+      const failureMessage = failedRecord?.lastSyncError || "Some records still need retry";
+      refreshCloudPanel(failed ? failureMessage : `${synced} records posted to online report`);
+      showToast(failed ? failureMessage : "Online report updated", failed ? 4200 : 1800);
       return { synced, failed, reason: failed ? "failed" : "posted" };
     }
 
@@ -1366,8 +1385,9 @@
       el("cloudStatus").textContent = "Refreshing online report...";
       const { data, error } = await client.from(CLOUD_TABLE).select("*").order("updated_at", { ascending: false });
       if (error) {
-        showToast(error.message || "Could not refresh online report");
-        refreshCloudPanel("Online report refresh failed");
+        const message = cloudErrorMessage(error);
+        showToast(message, 4200);
+        refreshCloudPanel(message);
         return;
       }
       records = migrateControlRecords((data || []).map(cloudRowToRecord));
@@ -1474,11 +1494,11 @@
       refreshCloudPanel();
     }
 
-    function showToast(message) {
+    function showToast(message, duration = 1800) {
       toast.textContent = message;
       toast.classList.add("show");
       window.clearTimeout(showToast.timer);
-      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1800);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), duration);
     }
 
     function recordScore(record) {
@@ -2241,8 +2261,9 @@
       try {
         await postRecordToOnlineReport(record, "Control point");
       } catch (error) {
-        refreshCloudPanel("Online report post failed");
-        showToast(error.message || "Saved locally; online report post failed");
+        const message = cloudErrorMessage(error);
+        refreshCloudPanel(message);
+        showToast(message, 4200);
       }
     });
 
@@ -2313,8 +2334,9 @@
       try {
         await postRecordToOnlineReport(record, "Survey record");
       } catch (error) {
-        refreshCloudPanel("Online report post failed");
-        showToast(error.message || "Saved locally; online report post failed");
+        const message = cloudErrorMessage(error);
+        refreshCloudPanel(message);
+        showToast(message, 4200);
       }
       switchScreen("detail");
     });
@@ -2378,15 +2400,17 @@
       });
       showToast("Online report connection saved");
       syncAllToCloud({ onlyPending: true }).catch((error) => {
-        refreshCloudPanel("Online report post failed");
-        showToast(error.message || "Online report post failed");
+        const message = cloudErrorMessage(error);
+        refreshCloudPanel(message);
+        showToast(message, 4200);
       });
     });
 
     el("syncCloud").addEventListener("click", () => {
       syncAllToCloud({ onlyPending: true }).catch((error) => {
-        refreshCloudPanel("Online report post failed");
-        showToast(error.message || "Online report post failed");
+        const message = cloudErrorMessage(error);
+        refreshCloudPanel(message);
+        showToast(message, 4200);
       });
     });
 
@@ -2394,15 +2418,17 @@
       try {
         await syncAllToCloud({ onlyPending: true });
       } catch (error) {
-        refreshCloudPanel("Online report post failed");
-        showToast(error.message || "Online report post failed");
+        const message = cloudErrorMessage(error);
+        refreshCloudPanel(message);
+        showToast(message, 4200);
       }
     });
 
     el("loadCloudRecords").addEventListener("click", () => {
       loadRecordsFromCloud().catch((error) => {
-        refreshCloudPanel("Online report refresh failed");
-        showToast(error.message || "Online report refresh failed");
+        const message = cloudErrorMessage(error);
+        refreshCloudPanel(message);
+        showToast(message, 4200);
       });
     });
 

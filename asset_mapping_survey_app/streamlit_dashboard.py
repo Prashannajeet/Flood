@@ -129,8 +129,16 @@ def fetch_records(supabase_url: str, api_key: str) -> tuple[list[dict[str, Any]]
         try:
             details = response.json()
             message = details.get("message") or details.get("hint") or response.text
+            code = details.get("code") or ""
         except ValueError:
             message = response.text
+            code = ""
+        if code == "PGRST205" or "field_records" in message or "schema cache" in message:
+            return [], "Database setup pending: run supabase-postgis-setup.sql in Supabase SQL Editor, then refresh."
+        if response.status_code == 401 or "Invalid API key" in message:
+            return [], "Supabase key rejected: check the project URL and deployment key."
+        if response.status_code == 403 or "permission denied" in message:
+            return [], "Database permission pending: run the Supabase setup SQL grants, then refresh."
         return [], f"Supabase returned {response.status_code}: {message}"
 
     try:

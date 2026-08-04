@@ -102,3 +102,6 @@ with check (bucket_id = 'asset-photos');
 -- select id, project_name, record_type, control_type, control_id, st_asgeojson(geom) as geojson
 -- from public.field_records
 -- where geom is not null;
+
+-- Force Supabase/PostgREST to reload the new table and policies immediately.
+select pg_notify('pgrst', 'reload schema');
