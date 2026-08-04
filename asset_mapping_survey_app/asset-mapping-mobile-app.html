@@ -129,6 +129,48 @@
       box-shadow: 0 0 0 4px rgba(47, 143, 103, 0.13);
     }
 
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .sync-now {
+      width: 38px;
+      height: 38px;
+      position: relative;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(28, 125, 153, 0.22);
+      border-radius: 8px;
+      color: var(--river);
+      background: #fff;
+      box-shadow: 0 8px 18px rgba(23, 32, 31, 0.08);
+      cursor: pointer;
+    }
+
+    .sync-now svg { width: 19px; height: 19px; stroke-width: 2.4; }
+
+    .sync-now-count {
+      min-width: 17px;
+      height: 17px;
+      position: absolute;
+      top: -6px;
+      right: -5px;
+      display: grid;
+      place-items: center;
+      padding: 0 5px;
+      border: 2px solid #fff;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--warn);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .sync-now-count:empty { display: none; }
+
     main { padding: 14px; }
     .screen { display: none; }
     .screen.active { display: block; }
@@ -661,7 +703,18 @@
           <p>Dam, river, canal and road survey</p>
         </div>
       </div>
-      <div class="status-pill"><span class="status-dot"></span><span id="syncLabel">Offline ready</span></div>
+      <div class="header-actions">
+        <div class="status-pill"><span class="status-dot"></span><span id="syncLabel">Offline ready</span></div>
+        <button class="sync-now" type="button" id="mobileSyncNow" title="Sync pending records to online report" aria-label="Sync pending records to online report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 1-15.3 6.4"></path>
+            <path d="M3 12A9 9 0 0 1 18.3 5.6"></path>
+            <path d="M7 18H3v4"></path>
+            <path d="M17 6h4V2"></path>
+          </svg>
+          <span class="sync-now-count" id="mobileSyncCount"></span>
+        </button>
+      </div>
     </header>
 
     <main>
@@ -1094,6 +1147,8 @@
       el("cloudStatus").textContent = message || (ready ? "Online report connected" : `Online report not connected.${fileHint}`);
       el("cloudRecordCount").textContent = pending ? `${pending} pending online / ${records.length} local` : `${records.length} local record${records.length === 1 ? "" : "s"}`;
       el("syncLabel").textContent = ready ? "Online report ready" : "Offline ready";
+      if (el("mobileSyncCount")) el("mobileSyncCount").textContent = pending ? String(Math.min(pending, 99)) : "";
+      if (el("mobileSyncNow")) el("mobileSyncNow").title = pending ? `${pending} record${pending === 1 ? "" : "s"} pending online` : "All records posted online";
     }
 
     function base64ToBlob(dataUrl) {
@@ -2279,6 +2334,13 @@
 
     el("syncCloud").addEventListener("click", () => {
       syncAllToCloud().catch((error) => {
+        refreshCloudPanel("Online report post failed");
+        showToast(error.message || "Online report post failed");
+      });
+    });
+
+    el("mobileSyncNow").addEventListener("click", () => {
+      syncAllToCloud({ onlyPending: true }).catch((error) => {
         refreshCloudPanel("Online report post failed");
         showToast(error.message || "Online report post failed");
       });
