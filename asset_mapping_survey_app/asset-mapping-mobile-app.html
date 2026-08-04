@@ -339,6 +339,24 @@
     .record-card h3 { margin: 0 0 4px; font-size: 14px; letter-spacing: 0; }
     .record-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
 
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      margin-top: 5px;
+      padding: 3px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .sync-badge.online { color: var(--canal); border-color: rgba(47, 143, 103, 0.35); background: rgba(47, 143, 103, 0.08); }
+    .sync-badge.pending { color: var(--warn); border-color: rgba(180, 95, 49, 0.35); background: rgba(180, 95, 49, 0.08); }
+    .sync-badge.failed { color: var(--risk); border-color: rgba(175, 53, 53, 0.35); background: rgba(175, 53, 53, 0.08); }
+
     .score {
       width: 38px;
       height: 38px;
@@ -1071,8 +1089,10 @@
       if (el("supabaseUrl")) el("supabaseUrl").value = config.url || "";
       if (el("supabaseAnonKey")) el("supabaseAnonKey").value = config.anonKey || "";
       const ready = Boolean(config.url && config.anonKey);
-      el("cloudStatus").textContent = message || (ready ? "Online report connected" : "Online report not connected");
-      el("cloudRecordCount").textContent = `${records.length} local record${records.length === 1 ? "" : "s"}`;
+      const pending = records.filter((record) => record.syncStatus !== "online").length;
+      const fileHint = location.protocol === "file:" ? " Open the http app link for best sync." : "";
+      el("cloudStatus").textContent = message || (ready ? "Online report connected" : `Online report not connected.${fileHint}`);
+      el("cloudRecordCount").textContent = pending ? `${pending} pending online / ${records.length} local` : `${records.length} local record${records.length === 1 ? "" : "s"}`;
       el("syncLabel").textContent = ready ? "Online report ready" : "Offline ready";
     }
 
@@ -1085,13 +1105,24 @@
       return new Blob([bytes], { type: mime });
     }
 
+    function cloudPhoto(photo, error = "") {
+      if (!photo) return photo;
+      const clean = { ...photo };
+      if (String(clean.url || "").startsWith("data:image")) {
+        delete clean.url;
+        clean.localOnly = true;
+      }
+      if (error) clean.uploadError = error;
+      return clean;
+    }
+
     async function uploadRecordPhotos(client, record) {
       const photos = [...(record.media || []), ...((record.control && record.control.photos) || [])];
       const uploaded = [];
       for (let index = 0; index < photos.length; index += 1) {
         const photo = photos[index];
         if (!photo?.url || !String(photo.url).startsWith("data:image")) {
-          uploaded.push(photo);
+          uploaded.push(cloudPhoto(photo));
           continue;
         }
         const path = `${record.projectName || "Project"}/${record.id}/photo-${index + 1}-${Date.now()}.jpg`.replace(/\s+/g, "-");
@@ -1100,11 +1131,11 @@
           upsert: true
         });
         if (error) {
-          uploaded.push(photo);
+          uploaded.push(cloudPhoto(photo, error.message || "Photo upload failed"));
           continue;
         }
         const { data } = client.storage.from(PHOTO_BUCKET).getPublicUrl(path);
-        uploaded.push({ ...photo, storagePath: path, publicUrl: data.publicUrl, url: data.publicUrl });
+        uploaded.push({ ...cloudPhoto(photo), storagePath: path, publicUrl: data.publicUrl, url: data.publicUrl, localOnly: false });
       }
       return uploaded;
     }
@@ -1150,39 +1181,74 @@
       const uploaded = await uploadRecordPhotos(client, cloudRecord);
       if (cloudRecord.type === "Control") cloudRecord.control.photos = uploaded.slice(0, 3);
       else cloudRecord.media = uploaded.slice(0, 3);
+      cloudRecord.syncStatus = "online";
+      cloudRecord.syncedAt = new Date().toISOString();
+      cloudRecord.lastSyncError = "";
       const { error } = await client.from(CLOUD_TABLE).upsert(recordToCloudRow(cloudRecord), { onConflict: "id" });
       if (error) throw error;
       return true;
     }
 
+    function markRecordSyncState(id, status, error = "") {
+      const record = records.find((item) => item.id === id);
+      if (!record) return;
+      record.syncStatus = status;
+      record.lastSyncError = error;
+      if (status === "online") record.syncedAt = new Date().toISOString();
+      saveRecords();
+      renderRecords();
+      renderControlList();
+      renderDetail();
+    }
+
     async function postRecordToOnlineReport(record, label = "Record") {
       if (!getSupabaseClient()) {
+        markRecordSyncState(record.id, "pending");
         refreshCloudPanel("Saved locally; online report not connected");
         showToast(`${label} saved locally; add Supabase key to post online`);
         return false;
       }
       refreshCloudPanel(`Posting ${label.toLowerCase()} online...`);
-      await syncRecordToCloud(record);
+      try {
+        await syncRecordToCloud(record);
+        markRecordSyncState(record.id, "online");
+      } catch (error) {
+        markRecordSyncState(record.id, "failed", error.message || "Online report post failed");
+        throw error;
+      }
       refreshCloudPanel(`${label} posted to online report`);
       showToast(`${label} posted to online report`);
       return true;
     }
 
-    async function syncAllToCloud() {
+    async function syncAllToCloud({ onlyPending = false } = {}) {
       const client = getSupabaseClient();
       if (!client) {
         showToast("Save Supabase connection first");
         return;
       }
+      const recordsToPost = onlyPending ? records.filter((record) => record.syncStatus !== "online") : records;
+      if (!recordsToPost.length) {
+        refreshCloudPanel("No pending records to post");
+        showToast("No pending records to post");
+        return;
+      }
       el("cloudStatus").textContent = "Posting records to online report...";
       let synced = 0;
-      for (const record of records) {
-        await syncRecordToCloud(record);
-        synced += 1;
-        el("cloudRecordCount").textContent = `${synced}/${records.length} posted`;
+      let failed = 0;
+      for (const record of recordsToPost) {
+        try {
+          await syncRecordToCloud(record);
+          markRecordSyncState(record.id, "online");
+          synced += 1;
+        } catch (error) {
+          failed += 1;
+          markRecordSyncState(record.id, "failed", error.message || "Online report post failed");
+        }
+        el("cloudRecordCount").textContent = `${synced}/${recordsToPost.length} posted`;
       }
-      refreshCloudPanel(`${synced} records posted to online report`);
-      showToast("Online report updated");
+      refreshCloudPanel(failed ? `${synced} posted, ${failed} failed` : `${synced} records posted to online report`);
+      showToast(failed ? "Some records still need retry" : "Online report updated");
     }
 
     async function loadRecordsFromCloud() {
@@ -1264,6 +1330,8 @@
       return {
         ...record,
         projectName: record.projectName || (record.id === "AM-2026-003" || record.id === "AM-2026-004" ? "Kundaliya" : "Mohanpura"),
+        syncStatus: record.syncStatus || "pending",
+        lastSyncError: record.lastSyncError || "",
         control: {
           type: record.controlType || "None",
           id: record.controlId || "",
@@ -1313,6 +1381,12 @@
 
     function scoreClass(record) {
       return record.condition === "Critical" ? "critical" : record.condition === "Watch" ? "watch" : "good";
+    }
+
+    function syncBadge(record) {
+      const status = record.syncStatus === "online" ? "online" : record.syncStatus === "failed" ? "failed" : "pending";
+      const label = status === "online" ? "Posted online" : status === "failed" ? "Retry online" : "Pending online";
+      return `<span class="sync-badge ${status}">${label}</span>`;
     }
 
     function nextId() {
@@ -1608,6 +1682,7 @@
           <span>
             <h3>${record.name}</h3>
             <p>${record.type} | ${record.chainage || "chainage pending"} | ${record.span || "dimension pending"}</p>
+            ${syncBadge(record)}
           </span>
           <span class="score ${scoreClass(record)}">${recordScore(record)}</span>
         </button>
@@ -1684,6 +1759,7 @@
           <span>
             <h3>${record.control.name || record.control.id || record.id}</h3>
             <p>${record.projectName || "Mohanpura"} | ${record.control.type} | ${record.control.elevation || "RL pending"}</p>
+            ${syncBadge(record)}
           </span>
           <span class="score good">CP</span>
         </button>
@@ -1721,6 +1797,7 @@
         <div class="detail-grid">
           <div class="detail-item"><b>Location</b><span>${record.lat}, ${record.lng}</span></div>
           <div class="detail-item"><b>Project</b><span>${record.projectName || "Mohanpura"}</span></div>
+          <div class="detail-item"><b>Online report</b><span>${record.syncStatus === "online" ? `Posted ${record.syncedAt ? new Date(record.syncedAt).toLocaleString() : ""}` : record.syncStatus === "failed" ? `Retry needed: ${record.lastSyncError || "post failed"}` : "Pending post"}</span></div>
           <div class="detail-item"><b>Chainage</b><span>${record.chainage || "Pending"}</span></div>
           <div class="detail-item"><b>Length / span</b><span>${record.span || "Pending"}</span></div>
           <div class="detail-item"><b>Photographs</b><span>${record.media?.length || 0}/3 attached</span></div>
@@ -2041,7 +2118,9 @@
         issue: control.description,
         media: [],
         control,
-        createdAt: existingRecord?.createdAt || new Date().toISOString()
+        createdAt: existingRecord?.createdAt || new Date().toISOString(),
+        syncStatus: "pending",
+        lastSyncError: ""
       };
       const existingIndex = records.findIndex((item) => item.id === record.id);
       if (existingIndex >= 0) records[existingIndex] = record;
@@ -2108,7 +2187,9 @@
         issue: data.issue,
         control: existingRecord?.control || { type: "None", id: "", name: "", surveyorName: "", northing: "", easting: "", ellipsoidalHeight: "", elevation: "", verticalDatum: "", dgpsAccuracy: "", observationTime: "", droneFlightId: "", droneAltitude: "", description: "" },
         media: mediaDraft.slice(0, 3),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        syncStatus: "pending",
+        lastSyncError: ""
       };
       const existingIndex = records.findIndex((item) => item.id === record.id);
       if (existingIndex >= 0) records[existingIndex] = record;
@@ -2190,6 +2271,10 @@
         anonKey: cloudForm.elements.supabaseAnonKey.value.trim()
       });
       showToast("Online report connection saved");
+      syncAllToCloud({ onlyPending: true }).catch((error) => {
+        refreshCloudPanel("Online report post failed");
+        showToast(error.message || "Online report post failed");
+      });
     });
 
     el("syncCloud").addEventListener("click", () => {

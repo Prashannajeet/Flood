@@ -434,6 +434,22 @@
       <p class="muted" style="margin-top:4px;">Asset records, control point fields, coordinate values, and mandatory photograph metadata are structured for backend storage. In production, records should go into database tables and photographs into object/file storage linked by asset ID and control ID.</p>
     </section>
 
+    <section class="card" style="padding:12px;margin-bottom:14px;">
+      <strong>Online database connection</strong>
+      <form class="filters" id="cloudForm" style="margin-top:10px;">
+        <div class="field">
+          <label for="supabaseUrl">Supabase project URL</label>
+          <input id="supabaseUrl" placeholder="https://your-project.supabase.co">
+        </div>
+        <div class="field">
+          <label for="supabaseAnonKey">Supabase anon public key</label>
+          <input id="supabaseAnonKey" placeholder="Paste anon key">
+        </div>
+        <button class="btn primary" type="submit">Save and refresh</button>
+        <span class="muted" id="cloudStatus">Online report not connected</span>
+      </form>
+    </section>
+
     <section class="dashboard-grid">
       <div class="panel map-panel">
         <div class="panel-header">
@@ -558,9 +574,30 @@
 
     const el = (id) => document.getElementById(id);
 
+    function loadCloudConfig() {
+      try {
+        return { url: DEFAULT_SUPABASE_URL, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
+      } catch {
+        return { url: DEFAULT_SUPABASE_URL };
+      }
+    }
+
+    function saveCloudConfig(config) {
+      localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(config));
+      refreshCloudForm();
+    }
+
+    function refreshCloudForm(message = "") {
+      const config = loadCloudConfig();
+      if (el("supabaseUrl")) el("supabaseUrl").value = config.url || "";
+      if (el("supabaseAnonKey")) el("supabaseAnonKey").value = config.anonKey || "";
+      const ready = Boolean(config.url && config.anonKey);
+      el("cloudStatus").textContent = message || (ready ? "Online report connected" : "Online report not connected");
+    }
+
     function getSupabaseClient() {
       try {
-        const config = { url: DEFAULT_SUPABASE_URL, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
+        const config = loadCloudConfig();
         if (!config.url || !config.anonKey || !window.supabase?.createClient) return null;
         return window.supabase.createClient(config.url, config.anonKey);
       } catch {
@@ -585,6 +622,7 @@
       const client = getSupabaseClient();
       if (!client) {
         if (!silent) el("mapStatus").textContent = "Save Supabase connection in mobile app first";
+        refreshCloudForm();
         return false;
       }
       if (!silent) el("mapStatus").textContent = "Refreshing online report...";
@@ -595,6 +633,7 @@
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrateControlRecords((data || []).map(cloudRowToRecord))));
       el("mapStatus").textContent = `${data.length} records loaded from online report`;
+      refreshCloudForm("Online report connected");
       render();
       return true;
     }
@@ -966,9 +1005,18 @@
     el("arcgisBasemap").addEventListener("change", () => {
       if (map) map.basemap = el("arcgisBasemap").value;
     });
+    el("cloudForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveCloudConfig({
+        url: el("supabaseUrl").value.trim(),
+        anonKey: el("supabaseAnonKey").value.trim()
+      });
+      loadCloudRecords();
+    });
     el("downloadCsv").addEventListener("click", downloadCsv);
     el("loadCloud").addEventListener("click", () => loadCloudRecords());
 
+    refreshCloudForm();
     initMap();
     render();
   </script>
