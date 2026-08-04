@@ -1,0 +1,17 @@
+{
+  "name": "Asset Mapping Survey",
+  "short_name": "Asset Map",
+  "description": "Mobile field app for mapping dam, river, canal and road assets.",
+  "start_url": "./asset-mapping-mobile-app.html",
+  "display": "standalone",
+  "background_color": "#f6f4ee",
+  "theme_color": "#123a43",
+  "icons": [
+    {
+      "src": "./asset-mapping-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
