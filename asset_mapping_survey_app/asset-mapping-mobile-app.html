@@ -1,0 +1,2181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#123a43">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Asset Map">
+  <link rel="manifest" href="./asset-mapping.webmanifest">
+  <link rel="icon" href="./asset-mapping-icon.svg">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ2ATbHW5nku1E0FjJZ6dgK7wzHDBrA=" crossorigin="">
+  <title>Asset Mapping Mobile App</title>
+  <style>
+    :root {
+      --ink: #162321;
+      --muted: #62706c;
+      --line: #d7dfdc;
+      --soft: #edf4f1;
+      --paper: #f6f4ee;
+      --panel: #ffffff;
+      --deep: #123a43;
+      --river: #1c7d99;
+      --canal: #2f8f67;
+      --road: #b45f31;
+      --dam: #59686f;
+      --risk: #ba3d34;
+      --warn: #bd7f1d;
+      --shadow: 0 18px 42px rgba(23, 32, 31, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(28, 125, 153, 0.12), transparent 36%),
+        linear-gradient(315deg, rgba(47, 143, 103, 0.13), transparent 34%),
+        var(--paper);
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .phone {
+      width: min(430px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #fbfaf6;
+      position: relative;
+      overflow-x: hidden;
+      box-shadow: 0 0 0 1px rgba(23, 32, 31, 0.08);
+      padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: calc(12px + env(safe-area-inset-top)) 14px 10px;
+      background: rgba(251, 250, 246, 0.95);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(23, 32, 31, 0.08);
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 900;
+      background:
+        radial-gradient(circle at 72% 26%, rgba(255,255,255,0.75), transparent 20%),
+        linear-gradient(145deg, var(--river), var(--canal));
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 3px 0 0;
+      max-width: 245px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-pill {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--soft);
+      color: #245f4c;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--canal);
+      box-shadow: 0 0 0 4px rgba(47, 143, 103, 0.13);
+    }
+
+    main { padding: 14px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metric, .card, .record-card, form {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(23, 32, 31, 0.06);
+    }
+
+    .metric { padding: 12px; min-height: 82px; }
+    .metric b { display: block; font-size: 24px; line-height: 1; margin-bottom: 7px; }
+    .metric span, .muted { color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .map-panel {
+      min-height: 246px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid #c2d2ce;
+      background: #dce8e5;
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+    }
+
+    .map {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: #dce8e5;
+    }
+
+    .leaflet-control-attribution {
+      font-size: 10px;
+    }
+
+    .leaflet-popup-content {
+      margin: 10px 12px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .map-pin {
+      width: 27px;
+      height: 27px;
+      border-radius: 50% 50% 50% 4px;
+      transform: rotate(-45deg);
+      border: 3px solid #fff;
+      box-shadow: 0 8px 18px rgba(23, 32, 31, 0.28);
+      background: var(--deep);
+    }
+
+    .map-pin span {
+      position: absolute;
+      inset: 4px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      transform: rotate(45deg);
+      background: rgba(255,255,255,0.92);
+      color: var(--deep);
+      font-size: 8px;
+      font-weight: 900;
+    }
+
+    .map-pin.selected { width: 34px; height: 34px; z-index: 2; box-shadow: 0 0 0 5px rgba(18, 58, 67, 0.16), 0 12px 22px rgba(23, 32, 31, 0.3); }
+
+    .detail-map-panel {
+      min-height: 260px;
+      margin-bottom: 12px;
+    }
+
+    .user-location-pin {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      background: var(--river);
+      box-shadow: 0 0 0 8px rgba(28, 125, 153, 0.22), 0 8px 16px rgba(23, 32, 31, 0.28);
+    }
+
+    .map-toolbar {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 500;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chip, .small-btn {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.92);
+      color: #263331;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 8px 18px rgba(23, 32, 31, 0.12);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      margin: 18px 2px 10px;
+    }
+
+    .section-title h2 { margin: 0; font-size: 16px; letter-spacing: 0; }
+    .section-title span { color: var(--muted); font-size: 12px; font-weight: 800; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      background: #ece8dc;
+      padding: 5px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+
+    .filter {
+      min-height: 38px;
+      border-radius: 7px;
+      background: transparent;
+      color: #53625e;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .filter.active {
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 6px 14px rgba(23, 32, 31, 0.1);
+    }
+
+    .record-list { display: grid; gap: 10px; }
+
+    .record-card {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      text-align: left;
+      color: inherit;
+    }
+
+    .asset-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      background: var(--deep);
+    }
+
+    .record-card h3 { margin: 0 0 4px; font-size: 14px; letter-spacing: 0; }
+    .record-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .score {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .score.good { background: var(--canal); }
+    .score.watch { background: var(--warn); }
+    .score.critical { background: var(--risk); }
+
+    .card { padding: 12px; }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-top: 10px;
+    }
+
+    .detail-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfcfb;
+    }
+
+    .detail-item b { display: block; font-size: 13px; margin-bottom: 4px; }
+    .detail-item span { color: var(--muted); font-size: 12px; }
+
+    form {
+      padding: 12px;
+      display: grid;
+      gap: 11px;
+    }
+
+    .field { display: grid; gap: 6px; }
+    label { color: #3e4b48; font-size: 12px; font-weight: 900; }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid #cbd5d1;
+      border-radius: 8px;
+      padding: 10px 11px;
+      outline: none;
+      color: var(--ink);
+      background: #fbfcfb;
+    }
+
+    textarea { min-height: 82px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--river); box-shadow: 0 0 0 3px rgba(28, 125, 153, 0.16); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+
+    .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+    .segmented label {
+      min-height: 38px;
+      border: 1px solid #cbd5d1;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #fbfcfb;
+      color: #53625e;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .segmented input:checked + label { background: var(--deep); color: #fff; border-color: var(--deep); }
+
+    .photo-drop {
+      position: relative;
+      border: 1px dashed #9dadab;
+      border-radius: 8px;
+      min-height: 80px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: #f4f7f6;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      padding: 12px;
+    }
+
+    .photo-drop input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .photo-tile {
+      min-height: 74px;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(28, 125, 153, 0.25), rgba(47, 143, 103, 0.25)),
+        #e3ece9;
+      display: grid;
+      place-items: center;
+      color: var(--deep);
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid #cbd5d1;
+      overflow: hidden;
+    }
+
+    .photo-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .photo-rule {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .camera-panel {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f4f7f6;
+      margin-inline: -4px;
+    }
+
+    .camera-preview {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      background: #dce8e5;
+      object-fit: cover;
+      display: block;
+    }
+
+    .camera-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 3px; }
+
+    .form-subhead {
+      margin: 6px 0 0;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .form-subhead h3 {
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .form-subhead span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .btn {
+      min-height: 44px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 12px;
+      font-weight: 900;
+    }
+
+    .btn.primary { background: var(--deep); color: #fff; }
+    .btn.secondary { background: var(--soft); color: #215947; }
+    .btn.danger { background: #f6e6e3; color: var(--risk); }
+    .btn.full { width: 100%; }
+
+    .export-box {
+      display: grid;
+      gap: 10px;
+    }
+
+    .export-preview {
+      min-height: 150px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfb;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .cloud-panel {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .cloud-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--soft);
+      color: #215947;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: min(430px, 100%);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(251, 250, 246, 0.96);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(23, 32, 31, 0.1);
+      z-index: 30;
+    }
+
+    .nav-item {
+      min-height: 52px;
+      border-radius: 8px;
+      background: transparent;
+      color: #61706c;
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .nav-item svg { width: 19px; height: 19px; stroke-width: 2.2; }
+    .nav-item.active { color: var(--deep); background: var(--soft); }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(78px + env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(18px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 40;
+      width: min(398px, calc(100% - 28px));
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+      transition: 180ms ease;
+      box-shadow: var(--shadow);
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .empty { padding: 18px 12px; text-align: center; color: var(--muted); }
+
+    @media (max-width: 360px) {
+      .brand p { max-width: 190px; }
+      .summary, .grid-2, .detail-grid { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 720px) {
+      body { display: grid; place-items: start center; padding: 22px 0; }
+      .phone { min-height: calc(100vh - 44px); border-radius: 18px; overflow: hidden; }
+      .bottom-nav { bottom: 22px; border-radius: 0 0 18px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">AM</div>
+        <div>
+          <h1>Asset Mapping</h1>
+          <p>Dam, river, canal and road survey</p>
+        </div>
+      </div>
+      <div class="status-pill"><span class="status-dot"></span><span id="syncLabel">Offline ready</span></div>
+    </header>
+
+    <main>
+      <section class="screen active" id="screen-map">
+        <div class="summary">
+          <div class="metric">
+            <b id="totalCount">0</b>
+            <span>Total saved survey records</span>
+          </div>
+          <div class="metric">
+            <b id="criticalCount">0</b>
+            <span>Critical assets needing attention</span>
+          </div>
+        </div>
+
+        <div class="map-panel" aria-label="OpenStreetMap asset map">
+          <div class="map" id="assetMap"></div>
+          <div class="map-toolbar">
+            <span class="chip" id="gpsChip">GPS 21.1498, 79.0806</span>
+            <button class="small-btn" type="button" id="captureGps">Use location</button>
+          </div>
+        </div>
+
+        <div class="filters" aria-label="Filter records">
+          <button class="filter active" type="button" data-filter="All">All</button>
+          <button class="filter" type="button" data-filter="Dam">Dam</button>
+          <button class="filter" type="button" data-filter="River">River</button>
+          <button class="filter" type="button" data-filter="Canal">Canal</button>
+          <button class="filter" type="button" data-filter="Control">Control</button>
+        </div>
+
+        <div class="section-title">
+          <h2>Mapped Assets</h2>
+          <span id="filterLabel">All categories</span>
+        </div>
+        <div class="record-list" id="recordList"></div>
+      </section>
+
+      <section class="screen" id="screen-survey">
+        <div class="section-title">
+          <h2>New Survey Record</h2>
+          <span id="draftLabel">Draft saved locally</span>
+        </div>
+
+        <form id="surveyForm">
+          <div class="grid-2">
+            <div class="field">
+              <label for="projectName">Project</label>
+              <select id="projectName" name="projectName" required>
+                <option value="Mohanpura">1: Mohanpura</option>
+                <option value="Kundaliya">2: Kundaliya</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="assetType">Asset type</label>
+              <select id="assetType" name="assetType" required>
+                <option value="Dam">Dam asset</option>
+                <option value="Road">Road over river/nala/channel</option>
+                <option value="River">River protection work</option>
+                <option value="Canal">Canal asset</option>
+                <option value="Road">Bridge / culvert</option>
+                <option value="River">Embankment</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="assetId">Asset ID</label>
+            <input id="assetId" name="assetId" required>
+          </div>
+
+          <div class="field">
+            <label for="name">Asset name / location</label>
+            <input id="name" name="name" placeholder="Village, chainage, structure name" required>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="lat">Latitude</label>
+              <input id="lat" name="lat" inputmode="decimal" value="21.1498">
+            </div>
+            <div class="field">
+              <label for="lng">Longitude</label>
+              <input id="lng" name="lng" inputmode="decimal" value="79.0806">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="chainage">Chainage / km</label>
+              <input id="chainage" name="chainage" placeholder="e.g. RD 4.250">
+            </div>
+            <div class="field">
+              <label for="span">Length / span</label>
+              <input id="span" name="span" placeholder="e.g. 18 m">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Condition</label>
+            <div class="segmented">
+              <input type="radio" name="condition" id="good" value="Good" checked>
+              <label for="good">Good</label>
+              <input type="radio" name="condition" id="watch" value="Watch">
+              <label for="watch">Watch</label>
+              <input type="radio" name="condition" id="critical" value="Critical">
+              <label for="critical">Critical</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="issue">Observed issue</label>
+            <textarea id="issue" name="issue" placeholder="Damage, erosion, settlement, overtopping mark, blockage, missing guard stone"></textarea>
+          </div>
+
+          <div class="field">
+            <label>Photographs</label>
+            <div class="photo-drop">
+              <input id="mediaInput" type="file" accept="image/*" multiple>
+              <span>Tap to attach 1 to 3 photographs</span>
+            </div>
+            <div class="photo-rule" id="photoRule">At least 1 photograph is mandatory. Maximum 3 photographs.</div>
+            <div class="photo-grid" id="photoGrid"></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" type="button" id="saveDraft">Save draft</button>
+            <button class="btn primary" type="submit">Submit record</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="screen" id="screen-control">
+        <div class="section-title">
+          <h2>Control Points</h2>
+          <span>DGPS + drone BM/TBM</span>
+        </div>
+
+        <form id="controlForm">
+          <div class="field">
+            <label for="controlProjectName">Project</label>
+            <select id="controlProjectName" name="controlProjectName" required>
+              <option value="Mohanpura">1: Mohanpura</option>
+              <option value="Kundaliya">2: Kundaliya</option>
+            </select>
+          </div>
+
+          <div class="map-panel" aria-label="Control point map">
+            <div class="map" id="controlPointMap"></div>
+            <div class="map-toolbar">
+              <span class="chip" id="controlGpsChip">Control GPS pending</span>
+              <button class="small-btn" type="button" id="captureControlGps">Use location</button>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="controlLat">Control latitude</label>
+              <input id="controlLat" name="controlLat" inputmode="decimal" placeholder="Auto captured">
+            </div>
+            <div class="field">
+              <label for="controlLng">Control longitude</label>
+              <input id="controlLng" name="controlLng" inputmode="decimal" placeholder="Auto captured">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="controlType">Control point type</label>
+              <select id="controlType" name="controlType">
+                <option value="None">Not required</option>
+                <option value="DGPS BM">DGPS benchmark (BM)</option>
+                <option value="DGPS TBM">DGPS temporary BM (TBM)</option>
+                <option value="Drone GCP">Drone ground control point</option>
+                <option value="Drone Checkpoint">Drone checkpoint</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="controlId">BM / TBM ID</label>
+              <input id="controlId" name="controlId" placeholder="e.g. TBM-04">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="controlName">DGPS BM / TBM name</label>
+              <input id="controlName" name="controlName" placeholder="e.g. Mohanpura TBM near spillway">
+            </div>
+            <div class="field">
+              <label for="surveyorName">Surveyor name</label>
+              <input id="surveyorName" name="surveyorName" placeholder="Surveyor / agency name">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="controlElevation">RL / elevation</label>
+              <input id="controlElevation" name="controlElevation" inputmode="decimal" placeholder="e.g. 312.428 m">
+            </div>
+            <div class="field">
+              <label for="verticalDatum">Vertical datum</label>
+              <input id="verticalDatum" name="verticalDatum" placeholder="e.g. MSL / project datum">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="northing">Northing</label>
+              <input id="northing" name="northing" inputmode="decimal" placeholder="e.g. 2340156.482">
+            </div>
+            <div class="field">
+              <label for="easting">Easting</label>
+              <input id="easting" name="easting" inputmode="decimal" placeholder="e.g. 508342.116">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="ellipsoidalHeight">Ellipsoidal height</label>
+            <input id="ellipsoidalHeight" name="ellipsoidalHeight" inputmode="decimal" placeholder="e.g. 340.782 m">
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="dgpsAccuracy">DGPS accuracy</label>
+              <input id="dgpsAccuracy" name="dgpsAccuracy" placeholder="e.g. H 15 mm, V 25 mm">
+            </div>
+            <div class="field">
+              <label for="observationTime">Observation time</label>
+              <input id="observationTime" name="observationTime" placeholder="e.g. 45 min static">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="droneFlightId">Drone flight ID</label>
+              <input id="droneFlightId" name="droneFlightId" placeholder="e.g. FLT-RIVER-02">
+            </div>
+            <div class="field">
+              <label for="droneAltitude">Drone altitude / GSD</label>
+              <input id="droneAltitude" name="droneAltitude" placeholder="e.g. 80 m / 2.5 cm">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="controlDescription">Monument / control notes</label>
+            <textarea id="controlDescription" name="controlDescription" placeholder="Pillar, nail, paint mark, nearby reference, protection required, visibility for drone imagery"></textarea>
+          </div>
+
+          <div class="field">
+            <label>Control point photographs</label>
+            <div class="camera-panel">
+              <video class="camera-preview" id="controlCameraPreview" autoplay playsinline muted></video>
+              <div class="camera-actions">
+                <button class="btn secondary" type="button" id="startControlCamera">Start camera</button>
+                <button class="btn primary" type="button" id="captureControlPhoto">Capture photo</button>
+              </div>
+            </div>
+            <div class="photo-rule" id="controlPhotoRule">At least 1 control photograph is mandatory. Maximum 3 photographs.</div>
+            <div class="photo-grid" id="controlPhotoGrid"></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" type="button" id="loadSelectedControl">New control</button>
+            <button class="btn primary" type="submit">Save control</button>
+          </div>
+        </form>
+
+        <div class="section-title">
+          <h2>Saved Controls</h2>
+          <span id="controlListLabel">0 controls</span>
+        </div>
+        <div class="record-list" id="controlList"></div>
+      </section>
+
+      <section class="screen" id="screen-detail">
+        <div class="section-title">
+          <h2>Asset Detail</h2>
+          <span id="detailStatus">Selected record</span>
+        </div>
+        <div class="map-panel detail-map-panel" aria-label="Focused asset map">
+          <div class="map" id="detailAssetMap"></div>
+          <div class="map-toolbar">
+            <span class="chip" id="detailMapChip">Focused asset map</span>
+            <button class="small-btn" type="button" id="zoomDetailAsset">Focus asset</button>
+          </div>
+        </div>
+        <div class="card" id="detailCard"></div>
+        <div class="actions" style="margin-top: 10px;">
+          <button class="btn secondary" type="button" id="editRecord">Edit record</button>
+          <button class="btn danger" type="button" id="deleteRecord">Delete</button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-export">
+        <div class="section-title">
+          <h2>Cloud + Export</h2>
+          <span>Supabase repository</span>
+        </div>
+        <form class="cloud-panel" id="cloudForm">
+          <div class="cloud-status">
+            <span id="cloudStatus">Cloud database not connected</span>
+            <span id="cloudRecordCount">0 records synced</span>
+          </div>
+          <div class="field">
+            <label for="supabaseUrl">Supabase project URL</label>
+            <input id="supabaseUrl" name="supabaseUrl" placeholder="https://your-project.supabase.co">
+          </div>
+          <div class="field">
+            <label for="supabaseAnonKey">Supabase anon public key</label>
+            <input id="supabaseAnonKey" name="supabaseAnonKey" placeholder="Paste anon key">
+          </div>
+          <div class="actions">
+            <button class="btn secondary" type="submit">Save connection</button>
+            <button class="btn primary" type="button" id="syncCloud">Sync to cloud</button>
+          </div>
+          <button class="btn secondary full" type="button" id="loadCloudRecords">Load from cloud</button>
+        </form>
+        <div class="card export-box">
+          <div class="summary">
+            <div class="metric">
+              <b id="exportCount">0</b>
+              <span>Records ready for submission</span>
+            </div>
+            <div class="metric">
+              <b id="photoCount">0</b>
+              <span>Attached media references</span>
+            </div>
+            <div class="metric">
+              <b id="controlCount">0</b>
+              <span>BM, TBM, GCP and checkpoint controls</span>
+            </div>
+          </div>
+          <button class="btn primary full" type="button" id="downloadExport">Download survey packet</button>
+          <button class="btn secondary full" type="button" id="copyExport">Copy packet data</button>
+          <div class="export-preview" id="exportPreview"></div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Primary navigation">
+      <button class="nav-item active" type="button" data-screen="map" aria-label="Map view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z"/><path d="M9 3v15"/><path d="M15 6v15"/></svg>
+        Map
+      </button>
+      <button class="nav-item" type="button" data-screen="survey" aria-label="Survey form">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 2h8l1 3h3v17H4V5h3l1-3z"/><path d="M8 11h8"/><path d="M8 16h5"/></svg>
+        Survey
+      </button>
+      <button class="nav-item" type="button" data-screen="control" aria-label="Control points">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>
+        Control
+      </button>
+      <button class="nav-item" type="button" data-screen="detail" aria-label="Asset detail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 4h18v16H3z"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
+        Detail
+      </button>
+      <button class="nav-item" type="button" data-screen="export" aria-label="Export records">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        Export
+      </button>
+    </nav>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const STORAGE_KEY = "assetMappingRecordsV2";
+    const DRAFT_KEY = "assetMappingDraftV2";
+    const MEDIA_KEY = "assetMappingMediaV2";
+    const CLOUD_CONFIG_KEY = "assetMappingSupabaseConfigV1";
+    const CLOUD_TABLE = "field_records";
+    const PHOTO_BUCKET = "asset-photos";
+    const DEFAULT_SUPABASE_URL = "https://lagrhtwsomtwvwkhtchg.supabase.co";
+
+    const seedRecords = [
+      { id: "AM-2026-001", projectName: "Mohanpura", type: "Dam", name: "Spillway gate bay 3", lat: "21.1498", lng: "79.0806", chainage: "Dam axis", span: "120 m", condition: "Good", issue: "Minor seepage mark near inspection gallery.", media: ["GATE"], control: { type: "DGPS BM", id: "BM-DAM-01", name: "Mohanpura BM near spillway", surveyorName: "Field Survey Team A", northing: "2340156.482", easting: "508342.116", ellipsoidalHeight: "340.782 m", elevation: "312.428 m", verticalDatum: "MSL", dgpsAccuracy: "H 12 mm, V 18 mm", observationTime: "60 min static", droneFlightId: "FLT-DAM-01", droneAltitude: "80 m / 2.8 cm GSD", description: "Concrete pillar on left abutment, protected and intervisible with spillway." }, createdAt: "2026-08-04T05:40:00.000Z" },
+      { id: "AM-2026-002", projectName: "Mohanpura", type: "Road", name: "Road crossing over nala", lat: "21.1503", lng: "79.0812", chainage: "Km 2.700", span: "2 lane", condition: "Critical", issue: "Approach scouring observed on downstream side.", media: ["ROAD"], control: { type: "DGPS TBM", id: "TBM-RD-02", name: "Mohanpura nala crossing TBM", surveyorName: "Field Survey Team A", northing: "2340204.775", easting: "508407.338", ellipsoidalHeight: "334.221 m", elevation: "306.115 m", verticalDatum: "Project datum", dgpsAccuracy: "H 18 mm, V 30 mm", observationTime: "45 min static", droneFlightId: "FLT-NALA-02", droneAltitude: "70 m / 2.2 cm GSD", description: "Paint mark on culvert parapet; use for nala crossing section control." }, createdAt: "2026-08-04T05:45:00.000Z" },
+      { id: "AM-2026-003", projectName: "Kundaliya", type: "River", name: "Left bank pitching", lat: "21.1489", lng: "79.0797", chainage: "Reach 0.800", span: "0.8 km", condition: "Watch", issue: "Stone displacement and local bank erosion.", media: ["BANK"], control: { type: "Drone GCP", id: "GCP-RP-03", name: "Kundaliya river GCP 03", surveyorName: "Drone Survey Team B", northing: "2339948.220", easting: "508248.903", ellipsoidalHeight: "333.108 m", elevation: "304.870 m", verticalDatum: "MSL", dgpsAccuracy: "H 15 mm, V 24 mm", observationTime: "30 min rapid static", droneFlightId: "FLT-RIVER-02", droneAltitude: "90 m / 3.1 cm GSD", description: "Checker target placed above flood mark for bank protection orthomosaic." }, createdAt: "2026-08-04T05:50:00.000Z" },
+      { id: "AM-2026-004", projectName: "Kundaliya", type: "Canal", name: "Canal aqueduct RD 4.250", lat: "21.1511", lng: "79.0821", chainage: "RD 4.250", span: "18 m", condition: "Watch", issue: "Railing missing on left side.", media: ["AQU"], control: { type: "Drone Checkpoint", id: "CHK-CA-04", name: "Kundaliya canal checkpoint 04", surveyorName: "Drone Survey Team B", northing: "2340291.640", easting: "508499.442", ellipsoidalHeight: "337.004 m", elevation: "309.350 m", verticalDatum: "Canal project datum", dgpsAccuracy: "H 20 mm, V 35 mm", observationTime: "20 min RTK check", droneFlightId: "FLT-CANAL-01", droneAltitude: "75 m / 2.6 cm GSD", description: "Checkpoint on downstream apron, independent from GCP set." }, createdAt: "2026-08-04T05:55:00.000Z" }
+    ];
+
+    const colors = { Dam: "#59686f", Road: "#b45f31", River: "#1c7d99", Canal: "#2f8f67", Control: "#123a43" };
+    const icons = { Dam: "DM", Road: "RD", River: "RP", Canal: "CA", Control: "CP" };
+    const scores = { Good: 86, Watch: 58, Critical: 28 };
+    let records = loadRecords();
+    let selectedId = records[0]?.id || null;
+    let activeFilter = "All";
+    let mediaDraft = loadMediaDraft();
+    let controlMediaDraft = [];
+    let map = null;
+    let assetLayer = null;
+    let userMarker = null;
+    let detailMap = null;
+    let detailLayer = null;
+    let controlPointMap = null;
+    let controlPointLayer = null;
+    let controlPointMarker = null;
+    let controlLocationRequested = false;
+    let controlCameraStream = null;
+
+    const el = (id) => document.getElementById(id);
+    const form = el("surveyForm");
+    const controlForm = el("controlForm");
+    const cloudForm = el("cloudForm");
+    const toast = el("toast");
+
+    function loadCloudConfig() {
+      try {
+        return { url: DEFAULT_SUPABASE_URL, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
+      } catch {
+        return { url: DEFAULT_SUPABASE_URL };
+      }
+    }
+
+    function saveCloudConfig(config) {
+      localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(config));
+      refreshCloudPanel();
+    }
+
+    function getSupabaseClient() {
+      const config = loadCloudConfig();
+      if (!config.url || !config.anonKey || !window.supabase?.createClient) return null;
+      return window.supabase.createClient(config.url, config.anonKey);
+    }
+
+    function refreshCloudPanel(message = "") {
+      const config = loadCloudConfig();
+      if (el("supabaseUrl")) el("supabaseUrl").value = config.url || "";
+      if (el("supabaseAnonKey")) el("supabaseAnonKey").value = config.anonKey || "";
+      const ready = Boolean(config.url && config.anonKey);
+      el("cloudStatus").textContent = message || (ready ? "Cloud database connected" : "Cloud database not connected");
+      el("cloudRecordCount").textContent = `${records.length} local record${records.length === 1 ? "" : "s"}`;
+      el("syncLabel").textContent = ready ? "Cloud ready" : "Offline ready";
+    }
+
+    function base64ToBlob(dataUrl) {
+      const [header, body] = String(dataUrl || "").split(",");
+      const mime = (header.match(/data:(.*?);base64/) || [])[1] || "image/jpeg";
+      const binary = atob(body || "");
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return new Blob([bytes], { type: mime });
+    }
+
+    async function uploadRecordPhotos(client, record) {
+      const photos = [...(record.media || []), ...((record.control && record.control.photos) || [])];
+      const uploaded = [];
+      for (let index = 0; index < photos.length; index += 1) {
+        const photo = photos[index];
+        if (!photo?.url || !String(photo.url).startsWith("data:image")) {
+          uploaded.push(photo);
+          continue;
+        }
+        const path = `${record.projectName || "Project"}/${record.id}/photo-${index + 1}-${Date.now()}.jpg`.replace(/\s+/g, "-");
+        const { error } = await client.storage.from(PHOTO_BUCKET).upload(path, base64ToBlob(photo.url), {
+          contentType: photo.type || "image/jpeg",
+          upsert: true
+        });
+        if (error) {
+          uploaded.push(photo);
+          continue;
+        }
+        const { data } = client.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+        uploaded.push({ ...photo, storagePath: path, publicUrl: data.publicUrl, url: data.publicUrl });
+      }
+      return uploaded;
+    }
+
+    function recordToCloudRow(record) {
+      const isControl = record.type === "Control";
+      const photoCount = ((record.media || []).length + ((record.control && record.control.photos) || []).length);
+      return {
+        id: record.id,
+        project_name: record.projectName || "Mohanpura",
+        record_type: record.type,
+        asset_name: record.name || "",
+        condition: record.condition || "Good",
+        latitude: Number(record.lat) || null,
+        longitude: Number(record.lng) || null,
+        control_type: isControl ? record.control?.type || null : null,
+        control_id: isControl ? record.control?.id || null : null,
+        surveyor_name: isControl ? record.control?.surveyorName || null : null,
+        photo_count: photoCount,
+        payload: record,
+        created_at: record.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    function cloudRowToRecord(row) {
+      return normalizeRecord(row.payload || {
+        id: row.id,
+        projectName: row.project_name,
+        type: row.record_type,
+        name: row.asset_name,
+        condition: row.condition,
+        lat: row.latitude,
+        lng: row.longitude,
+        createdAt: row.created_at
+      });
+    }
+
+    async function syncRecordToCloud(record) {
+      const client = getSupabaseClient();
+      if (!client) return false;
+      const cloudRecord = JSON.parse(JSON.stringify(record));
+      const uploaded = await uploadRecordPhotos(client, cloudRecord);
+      if (cloudRecord.type === "Control") cloudRecord.control.photos = uploaded.slice(0, 3);
+      else cloudRecord.media = uploaded.slice(0, 3);
+      const { error } = await client.from(CLOUD_TABLE).upsert(recordToCloudRow(cloudRecord), { onConflict: "id" });
+      if (error) throw error;
+      return true;
+    }
+
+    async function syncAllToCloud() {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast("Save Supabase connection first");
+        return;
+      }
+      el("cloudStatus").textContent = "Syncing records to cloud...";
+      let synced = 0;
+      for (const record of records) {
+        await syncRecordToCloud(record);
+        synced += 1;
+        el("cloudRecordCount").textContent = `${synced}/${records.length} synced`;
+      }
+      refreshCloudPanel(`${synced} records synced to Supabase`);
+      showToast("Cloud sync complete");
+    }
+
+    async function loadRecordsFromCloud() {
+      const client = getSupabaseClient();
+      if (!client) {
+        showToast("Save Supabase connection first");
+        return;
+      }
+      el("cloudStatus").textContent = "Loading records from cloud...";
+      const { data, error } = await client.from(CLOUD_TABLE).select("*").order("updated_at", { ascending: false });
+      if (error) {
+        showToast(error.message || "Could not load cloud records");
+        refreshCloudPanel("Cloud load failed");
+        return;
+      }
+      records = migrateControlRecords((data || []).map(cloudRowToRecord));
+      selectedId = records[0]?.id || null;
+      saveRecords();
+      updateMetrics();
+      renderRecords();
+      renderControlScreen();
+      renderMapMarkers();
+      renderDetail();
+      refreshCloudPanel(`${records.length} records loaded from Supabase`);
+      showToast("Cloud records loaded");
+    }
+
+    function loadRecords() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        const migrated = migrateControlRecords(seedRecords.map(normalizeRecord));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? migrateControlRecords(parsed.map(normalizeRecord)) : migrateControlRecords(seedRecords.map(normalizeRecord));
+      } catch {
+        return migrateControlRecords(seedRecords.map(normalizeRecord));
+      }
+    }
+
+    function migrateControlRecords(sourceRecords) {
+      const output = [];
+      const existingIds = new Set(sourceRecords.map((record) => record.id));
+      sourceRecords.forEach((record) => {
+        if (record.type === "Control") {
+          output.push(record);
+          return;
+        }
+        const control = record.control || {};
+        if (control.type && control.type !== "None") {
+          const controlId = `CP-${(control.id || record.id).replace(/[^A-Za-z0-9-]/g, "-")}`;
+          if (!existingIds.has(controlId)) {
+            output.push({
+              id: controlId,
+              projectName: record.projectName || control.projectName || "Mohanpura",
+              type: "Control",
+              name: control.name || control.id || "Control point",
+              lat: control.lat || record.lat || "",
+              lng: control.lng || record.lng || "",
+              chainage: "Ground control point",
+              span: control.type,
+              condition: "Good",
+              issue: control.description || "",
+              media: [],
+              control: { ...control, projectName: record.projectName || control.projectName || "Mohanpura" },
+              createdAt: control.createdAt || record.createdAt || new Date().toISOString()
+            });
+            existingIds.add(controlId);
+          }
+        }
+        output.push({ ...record, control: { type: "None", id: "", name: "", surveyorName: "", lat: "", lng: "", northing: "", easting: "", ellipsoidalHeight: "", photos: [], elevation: "", verticalDatum: "", dgpsAccuracy: "", observationTime: "", droneFlightId: "", droneAltitude: "", description: "" } });
+      });
+      return output;
+    }
+
+    function normalizeRecord(record) {
+      return {
+        ...record,
+        projectName: record.projectName || (record.id === "AM-2026-003" || record.id === "AM-2026-004" ? "Kundaliya" : "Mohanpura"),
+        control: {
+          type: record.controlType || "None",
+          id: record.controlId || "",
+          name: record.controlName || "",
+          surveyorName: record.surveyorName || "",
+          lat: record.controlLat || "",
+          lng: record.controlLng || "",
+          northing: record.northing || "",
+          easting: record.easting || "",
+          ellipsoidalHeight: record.ellipsoidalHeight || "",
+          photos: record.controlPhotos || [],
+          elevation: record.controlElevation || "",
+          verticalDatum: record.verticalDatum || "",
+          dgpsAccuracy: record.dgpsAccuracy || "",
+          observationTime: record.observationTime || "",
+          droneFlightId: record.droneFlightId || "",
+          droneAltitude: record.droneAltitude || "",
+          description: record.controlDescription || "",
+          ...(record.control || {})
+        }
+      };
+    }
+
+    function loadMediaDraft() {
+      try {
+        return JSON.parse(localStorage.getItem(MEDIA_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveRecords() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      refreshCloudPanel();
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function recordScore(record) {
+      return scores[record.condition] || 60;
+    }
+
+    function scoreClass(record) {
+      return record.condition === "Critical" ? "critical" : record.condition === "Watch" ? "watch" : "good";
+    }
+
+    function nextId() {
+      const max = records.reduce((highest, record) => {
+        const number = Number(String(record.id).split("-").pop());
+        return Number.isFinite(number) ? Math.max(highest, number) : highest;
+      }, 0);
+      return `AM-2026-${String(max + 1).padStart(3, "0")}`;
+    }
+
+    function packet() {
+      const controlRecords = records.filter((record) => record.control && record.control.type && record.control.type !== "None");
+      return {
+        packetName: "Asset mapping survey field packet",
+        generatedAt: new Date().toISOString(),
+        surveyScope: ["Dam assets", "Road inventories over river/nala/channel", "River protection works", "Canal assets", "DGPS BM/TBM control", "Drone GCP/checkpoint control"],
+        recordCount: records.length,
+        controlPointCount: controlRecords.length,
+        controlProvision: {
+          methods: ["DGPS static/RTK observation", "Drone GCP/checkpoint mapping"],
+          supportedControlTypes: ["DGPS BM", "DGPS TBM", "Drone GCP", "Drone Checkpoint"],
+          records: controlRecords.map((record) => ({
+            assetId: record.id,
+            assetName: record.name,
+            assetType: record.type,
+            projectName: record.projectName || "Mohanpura",
+            latitude: record.lat,
+            longitude: record.lng,
+            control: record.control
+          }))
+        },
+        records
+      };
+    }
+
+    function toLatLng(record) {
+      const lat = Number(record.lat);
+      const lng = Number(record.lng);
+      return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+    }
+
+    function markerHtml(record, isSelected = false) {
+      const color = colors[record.type] || "#123a43";
+      const icon = icons[record.type] || "AS";
+      return `<div class="map-pin ${isSelected ? "selected" : ""}" style="background:${color}"><span>${icon}</span></div>`;
+    }
+
+    function initializeMap() {
+      if (typeof L === "undefined") {
+        el("assetMap").innerHTML = `<div class="empty">OpenStreetMap could not load. Check internet access and refresh.</div>`;
+        return;
+      }
+      map = L.map("assetMap", {
+        zoomControl: true,
+        attributionControl: true
+      }).setView([21.1498, 79.0806], 15);
+      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Tiles &copy; Esri"
+      });
+      const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Labels &copy; Esri"
+      });
+      const satelliteWithLabels = L.layerGroup([satelliteLayer, labelLayer]);
+      L.control.layers({ "OpenStreetMap": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(map);
+      assetLayer = L.layerGroup().addTo(map);
+      renderMapMarkers();
+      setTimeout(() => map.invalidateSize(), 120);
+    }
+
+    function initializeDetailMap() {
+      if (typeof L === "undefined") {
+        el("detailAssetMap").innerHTML = `<div class="empty">Map could not load. Check internet access and refresh.</div>`;
+        return;
+      }
+      detailMap = L.map("detailAssetMap", {
+        zoomControl: true,
+        attributionControl: true
+      }).setView([21.1498, 79.0806], 15);
+      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(detailMap);
+      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Tiles &copy; Esri"
+      });
+      const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Labels &copy; Esri"
+      });
+      const satelliteWithLabels = L.layerGroup([satelliteLayer, labelLayer]);
+      L.control.layers({ "OpenStreetMap": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(detailMap);
+      detailLayer = L.layerGroup().addTo(detailMap);
+      setTimeout(() => detailMap.invalidateSize(), 120);
+    }
+
+    function initializeControlPointMap() {
+      if (typeof L === "undefined") {
+        el("controlPointMap").innerHTML = `<div class="empty">Map could not load. Check internet access and refresh.</div>`;
+        return;
+      }
+      controlPointMap = L.map("controlPointMap", {
+        zoomControl: true,
+        attributionControl: true
+      }).setView([21.1498, 79.0806], 16);
+      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(controlPointMap);
+      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Tiles &copy; Esri"
+      });
+      const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+        attribution: "Labels &copy; Esri"
+      });
+      const satelliteHybrid = L.layerGroup([satelliteLayer, labelLayer]);
+      L.control.layers({ "OpenStreetMap": streetLayer, "ArcGIS Satellite Hybrid": satelliteHybrid }, {}, { collapsed: true }).addTo(controlPointMap);
+      controlPointLayer = L.layerGroup().addTo(controlPointMap);
+      setTimeout(() => controlPointMap.invalidateSize(), 120);
+    }
+
+    function renderControlPointMarker(lat, lng, label = "Control point") {
+      if (!controlPointMap || !controlPointLayer || typeof L === "undefined") return;
+      const latNumber = Number(lat);
+      const lngNumber = Number(lng);
+      if (!Number.isFinite(latNumber) || !Number.isFinite(lngNumber)) return;
+      const latLng = [latNumber, lngNumber];
+      controlPointLayer.clearLayers();
+      controlPointMarker = L.marker(latLng, {
+        icon: L.divIcon({
+          className: "",
+          html: `<div class="user-location-pin"></div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        })
+      }).addTo(controlPointLayer);
+      controlPointMarker.bindPopup(`${label}<br>${latNumber.toFixed(6)}, ${lngNumber.toFixed(6)}`);
+      controlPointMap.setView(latLng, Math.max(controlPointMap.getZoom(), 17));
+      el("controlGpsChip").textContent = `GPS ${latNumber.toFixed(6)}, ${lngNumber.toFixed(6)}`;
+    }
+
+    function captureControlLocation(auto = false) {
+      if (!navigator.geolocation) {
+        if (!auto) showToast("Location is not available in this browser");
+        return;
+      }
+      el("captureControlGps").textContent = "Locating...";
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude.toFixed(6);
+          const lng = position.coords.longitude.toFixed(6);
+          el("controlLat").value = lat;
+          el("controlLng").value = lng;
+          el("captureControlGps").textContent = "Use location";
+          renderControlPointMarker(lat, lng, "Captured control point");
+          if (!auto) showToast("Control point location captured");
+        },
+        (error) => {
+          el("captureControlGps").textContent = "Use location";
+          if (!auto) {
+            const message = error.code === 1 ? "Location permission was denied" : "Could not capture control location";
+            showToast(message);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    }
+
+    function renderMapMarkers() {
+      if (!map || !assetLayer || typeof L === "undefined") return;
+      assetLayer.clearLayers();
+      const bounds = [];
+      records.forEach((record) => {
+        const latLng = toLatLng(record);
+        if (!latLng) return;
+        bounds.push(latLng);
+        const selected = record.id === selectedId;
+        const marker = L.marker(latLng, {
+          icon: L.divIcon({
+            className: "",
+            html: markerHtml(record, selected),
+            iconSize: selected ? [34, 34] : [27, 27],
+            iconAnchor: selected ? [17, 34] : [13, 27],
+            popupAnchor: [0, -28]
+          })
+        }).addTo(assetLayer);
+        marker.bindPopup(`<strong>${record.name}</strong><br>${record.type} | ${record.condition}<br>${record.id}`);
+        marker.on("click", () => {
+          selectedId = record.id;
+          renderDetail();
+          switchScreen("detail");
+        });
+      });
+      if (bounds.length) {
+        map.fitBounds(bounds, { padding: [34, 34], maxZoom: 16 });
+      }
+    }
+
+    function renderDetailMap(focus = true) {
+      if (!detailMap || !detailLayer || typeof L === "undefined") return;
+      const selectedRecord = records.find((item) => item.id === selectedId) || records[0];
+      detailLayer.clearLayers();
+      const bounds = [];
+      records.forEach((record) => {
+        const latLng = toLatLng(record);
+        if (!latLng) return;
+        bounds.push(latLng);
+        const selected = selectedRecord && record.id === selectedRecord.id;
+        const marker = L.marker(latLng, {
+          icon: L.divIcon({
+            className: "",
+            html: markerHtml(record, selected),
+            iconSize: selected ? [34, 34] : [27, 27],
+            iconAnchor: selected ? [17, 34] : [13, 27],
+            popupAnchor: [0, -28]
+          })
+        }).addTo(detailLayer);
+        marker.bindPopup(`<strong>${record.name}</strong><br>${record.projectName || "Mohanpura"} | ${record.type}<br>${record.id}`);
+        marker.on("click", () => {
+          selectedId = record.id;
+          renderDetail();
+        });
+        if (selected && focus) marker.openPopup();
+      });
+      if (selectedRecord) {
+        const selectedLatLng = toLatLng(selectedRecord);
+        if (selectedLatLng && focus) {
+          detailMap.setView(selectedLatLng, Math.max(detailMap.getZoom(), 17));
+          el("detailMapChip").textContent = `${selectedRecord.type} ${selectedRecord.id}`;
+          return;
+        }
+      }
+      if (bounds.length) detailMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+      el("detailMapChip").textContent = bounds.length ? `${bounds.length} mapped locations` : "No mapped location";
+    }
+
+    function showUserLocation(lat, lng, accuracy) {
+      if (!map || typeof L === "undefined") return;
+      const latLng = [lat, lng];
+      if (!userMarker) {
+        userMarker = L.marker(latLng, {
+          icon: L.divIcon({
+            className: "",
+            html: `<div class="user-location-pin"></div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+          })
+        }).addTo(map);
+      } else {
+        userMarker.setLatLng(latLng);
+      }
+      userMarker.bindPopup(`Your location<br>Accuracy ${Math.round(accuracy || 0)} m`);
+      map.setView(latLng, Math.max(map.getZoom(), 17));
+    }
+
+    function updateMetrics() {
+      el("totalCount").textContent = records.length;
+      el("criticalCount").textContent = records.filter((record) => record.condition === "Critical").length;
+      el("exportCount").textContent = records.length;
+      el("photoCount").textContent = records.reduce((sum, record) => sum + (record.media?.length || 0), 0);
+      el("controlCount").textContent = controlCount();
+      el("exportPreview").textContent = JSON.stringify(packet(), null, 2);
+    }
+
+    function renderRecords() {
+      const filtered = activeFilter === "All" ? records : records.filter((record) => record.type === activeFilter);
+      el("filterLabel").textContent = activeFilter === "All" ? "All categories" : `${activeFilter} assets`;
+      el("recordList").innerHTML = filtered.length ? filtered.map((record) => `
+        <button class="record-card" type="button" data-open="${record.id}">
+          <span class="asset-icon" style="background:${colors[record.type] || "#123a43"}">${icons[record.type] || "AS"}</span>
+          <span>
+            <h3>${record.name}</h3>
+            <p>${record.type} | ${record.chainage || "chainage pending"} | ${record.span || "dimension pending"}</p>
+          </span>
+          <span class="score ${scoreClass(record)}">${recordScore(record)}</span>
+        </button>
+      `).join("") : `<div class="card empty">No records in this category yet.</div>`;
+
+      document.querySelectorAll("[data-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedId = button.dataset.open;
+          renderDetail();
+          switchScreen("detail");
+        });
+      });
+    }
+
+    function controlCount() {
+      return records.filter((record) => record.control && record.control.type && record.control.type !== "None").length;
+    }
+
+    function renderControlScreen() {
+      const projectName = el("controlProjectName").value || "Mohanpura";
+      const selected = records.find((record) => record.id === selectedId && record.type === "Control" && (record.projectName || "Mohanpura") === projectName);
+      if (selected) {
+        loadControlRecord(selected.id);
+      } else if (!controlForm.elements.controlId.value) {
+        clearControlForm(projectName);
+      }
+      renderControlList();
+    }
+
+    function clearControlForm(projectName = el("controlProjectName").value || "Mohanpura") {
+      controlForm.reset();
+      controlForm.elements.controlProjectName.value = projectName;
+      controlForm.elements.controlType.value = "DGPS BM";
+      controlForm.elements.controlLat.value = "";
+      controlForm.elements.controlLng.value = "";
+      controlMediaDraft = [];
+      renderControlMediaDraft();
+      if (controlPointLayer) controlPointLayer.clearLayers();
+      el("controlGpsChip").textContent = "Control GPS pending";
+    }
+
+    function loadControlRecord(recordId) {
+      const record = records.find((item) => item.id === recordId && item.type === "Control");
+      const control = record?.control || {};
+      controlForm.elements.controlProjectName.value = record?.projectName || control.projectName || "Mohanpura";
+      controlForm.elements.controlType.value = control.type || "None";
+      controlForm.elements.controlId.value = control.id || "";
+      controlForm.elements.controlName.value = control.name || "";
+      controlForm.elements.surveyorName.value = control.surveyorName || "";
+      controlForm.elements.controlLat.value = control.lat || record?.lat || "";
+      controlForm.elements.controlLng.value = control.lng || record?.lng || "";
+      controlForm.elements.northing.value = control.northing || "";
+      controlForm.elements.easting.value = control.easting || "";
+      controlForm.elements.ellipsoidalHeight.value = control.ellipsoidalHeight || "";
+      controlForm.elements.controlElevation.value = control.elevation || "";
+      controlForm.elements.verticalDatum.value = control.verticalDatum || "";
+      controlForm.elements.dgpsAccuracy.value = control.dgpsAccuracy || "";
+      controlForm.elements.observationTime.value = control.observationTime || "";
+      controlForm.elements.droneFlightId.value = control.droneFlightId || "";
+      controlForm.elements.droneAltitude.value = control.droneAltitude || "";
+      controlForm.elements.controlDescription.value = control.description || "";
+      controlMediaDraft = (control.photos || []).map((item, index) => typeof item === "string" ? ({ label: `CONTROL PHOTO ${index + 1}`, name: item }) : item);
+      renderControlMediaDraft();
+      renderControlPointMarker(controlForm.elements.controlLat.value, controlForm.elements.controlLng.value, control.id || "Control point");
+    }
+
+    function renderControlList() {
+      const projectName = el("controlProjectName").value || "Mohanpura";
+      const controls = records.filter((record) => record.type === "Control" && (record.projectName || "Mohanpura") === projectName && record.control && record.control.type && record.control.type !== "None");
+      el("controlListLabel").textContent = `${controls.length} control${controls.length === 1 ? "" : "s"}`;
+      el("controlList").innerHTML = controls.length ? controls.map((record) => `
+        <button class="record-card" type="button" data-control-open="${record.id}">
+          <span class="asset-icon" style="background:${colors.Control}">${icons.Control}</span>
+          <span>
+            <h3>${record.control.name || record.control.id || record.id}</h3>
+            <p>${record.projectName || "Mohanpura"} | ${record.control.type} | ${record.control.elevation || "RL pending"}</p>
+          </span>
+          <span class="score good">CP</span>
+        </button>
+      `).join("") : `<div class="card empty">No control points saved yet.</div>`;
+
+      document.querySelectorAll("[data-control-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedId = button.dataset.controlOpen;
+          loadControlRecord(selectedId);
+          renderDetail();
+          showToast("Control point loaded");
+        });
+      });
+    }
+
+    function renderDetail() {
+      const record = records.find((item) => item.id === selectedId) || records[0];
+      if (!record) {
+        el("detailCard").innerHTML = `<div class="empty">No asset selected.</div>`;
+        el("detailStatus").textContent = "No record";
+        return;
+      }
+      selectedId = record.id;
+      const control = record.control || {};
+      el("detailStatus").textContent = `${record.id} | ${record.condition}`;
+      el("detailCard").innerHTML = `
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span class="asset-icon" style="background:${colors[record.type] || "#123a43"}">${icons[record.type] || "AS"}</span>
+          <div>
+            <h3 style="margin:0 0 4px;font-size:16px;">${record.name}</h3>
+            <div class="muted">${record.projectName || "Mohanpura"} | ${record.type} | ${record.id}</div>
+          </div>
+          <span class="score ${scoreClass(record)}" style="margin-left:auto;">${recordScore(record)}</span>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-item"><b>Location</b><span>${record.lat}, ${record.lng}</span></div>
+          <div class="detail-item"><b>Project</b><span>${record.projectName || "Mohanpura"}</span></div>
+          <div class="detail-item"><b>Chainage</b><span>${record.chainage || "Pending"}</span></div>
+          <div class="detail-item"><b>Length / span</b><span>${record.span || "Pending"}</span></div>
+          <div class="detail-item"><b>Photographs</b><span>${record.media?.length || 0}/3 attached</span></div>
+        </div>
+        <div class="detail-item" style="margin-top:10px;"><b>Observed issue</b><span>${record.issue || "No issue recorded."}</span></div>
+        <div class="form-subhead">
+          <h3>Control Provision</h3>
+          <span>${control.type || "None"}</span>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-item"><b>BM / TBM ID</b><span>${control.id || "Pending"}</span></div>
+          <div class="detail-item"><b>BM / TBM name</b><span>${control.name || "Pending"}</span></div>
+          <div class="detail-item"><b>Surveyor</b><span>${control.surveyorName || "Pending"}</span></div>
+          <div class="detail-item"><b>Northing</b><span>${control.northing || "Pending"}</span></div>
+          <div class="detail-item"><b>Easting</b><span>${control.easting || "Pending"}</span></div>
+          <div class="detail-item"><b>Ellipsoidal height</b><span>${control.ellipsoidalHeight || "Pending"}</span></div>
+          <div class="detail-item"><b>RL / elevation</b><span>${control.elevation || "Pending"}</span></div>
+          <div class="detail-item"><b>Vertical datum</b><span>${control.verticalDatum || "Pending"}</span></div>
+          <div class="detail-item"><b>DGPS accuracy</b><span>${control.dgpsAccuracy || "Pending"}</span></div>
+          <div class="detail-item"><b>Observation time</b><span>${control.observationTime || "Pending"}</span></div>
+          <div class="detail-item"><b>Drone flight</b><span>${control.droneFlightId || "Pending"}</span></div>
+          <div class="detail-item"><b>Altitude / GSD</b><span>${control.droneAltitude || "Pending"}</span></div>
+          <div class="detail-item"><b>Control photos</b><span>${control.photos?.length || 0}/3 attached</span></div>
+          <div class="detail-item"><b>Control notes</b><span>${control.description || "No control notes recorded."}</span></div>
+        </div>
+      `;
+      renderMapMarkers();
+      renderDetailMap();
+    }
+
+    function switchScreen(name) {
+      document.querySelectorAll(".screen").forEach((screen) => screen.classList.toggle("active", screen.id === `screen-${name}`));
+      document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.screen === name));
+      if (name === "export") updateMetrics();
+      if (name === "detail") {
+        renderDetailMap();
+        setTimeout(() => {
+          if (detailMap) {
+            detailMap.invalidateSize();
+            renderDetailMap();
+          }
+        }, 160);
+      }
+      if (name === "control") {
+        renderControlScreen();
+        setTimeout(() => {
+          if (controlPointMap) controlPointMap.invalidateSize();
+          const lat = el("controlLat").value;
+          const lng = el("controlLng").value;
+          if (lat && lng) renderControlPointMarker(lat, lng, "Control point");
+          if (!controlLocationRequested) {
+            controlLocationRequested = true;
+            captureControlLocation(true);
+          }
+          if (!controlCameraStream) {
+            startControlCamera();
+          }
+        }, 120);
+      }
+      if (name === "map" && map) {
+        setTimeout(() => {
+          map.invalidateSize();
+          renderMapMarkers();
+        }, 80);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function resetForm() {
+      form.reset();
+      el("projectName").value = "Mohanpura";
+      el("assetId").value = nextId();
+      el("lat").value = "21.1498";
+      el("lng").value = "79.0806";
+      mediaDraft = [];
+      localStorage.setItem(MEDIA_KEY, JSON.stringify(mediaDraft));
+      renderMediaDraft();
+    }
+
+    function renderMediaDraft() {
+      el("photoGrid").innerHTML = mediaDraft.map((item, index) => {
+        if (item.url) return `<div class="photo-tile"><img src="${item.url}" alt="Attached photograph ${index + 1}"></div>`;
+        return `<div class="photo-tile">${item.label}</div>`;
+      }).join("");
+      el("photoRule").textContent = `${mediaDraft.length}/3 photographs attached. At least 1 is mandatory.`;
+    }
+
+    function renderControlMediaDraft() {
+      el("controlPhotoGrid").innerHTML = controlMediaDraft.map((item, index) => {
+        if (item.url) return `<div class="photo-tile"><img src="${item.url}" alt="Attached control photograph ${index + 1}"></div>`;
+        return `<div class="photo-tile">${item.label}</div>`;
+      }).join("");
+      el("controlPhotoRule").textContent = `${controlMediaDraft.length}/3 control photographs attached. At least 1 is mandatory.`;
+    }
+
+    function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const image = new Image();
+          image.onload = () => {
+            const maxSize = 720;
+            const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.76));
+          };
+          image.onerror = reject;
+          image.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function startControlCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast("Camera is not available in this browser");
+        return;
+      }
+      try {
+        if (controlCameraStream) {
+          controlCameraStream.getTracks().forEach((track) => track.stop());
+        }
+        controlCameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false
+        });
+        el("controlCameraPreview").srcObject = controlCameraStream;
+        showToast("Camera started");
+      } catch {
+        showToast("Camera permission was denied or unavailable");
+      }
+    }
+
+    function captureControlPhotoFromCamera() {
+      if (controlMediaDraft.length >= 3) {
+        showToast("Maximum 3 control photographs already attached");
+        return;
+      }
+      const video = el("controlCameraPreview");
+      if (!video.srcObject || !video.videoWidth) {
+        showToast("Start camera first");
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      const maxSize = 720;
+      const scale = Math.min(1, maxSize / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const url = canvas.toDataURL("image/jpeg", 0.76);
+      const index = controlMediaDraft.length + 1;
+      controlMediaDraft.push({
+        label: `CONTROL PHOTO ${index}`,
+        name: `control-photo-${index}.jpg`,
+        type: "image/jpeg",
+        capturedAt: new Date().toISOString(),
+        source: "camera",
+        url
+      });
+      renderControlMediaDraft();
+      showToast(`Control photo ${index} captured`);
+    }
+
+    function saveDraft() {
+      const draft = Object.fromEntries(new FormData(form).entries());
+      draft.media = mediaDraft;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      el("draftLabel").textContent = "Draft saved locally";
+    }
+
+    function restoreDraft() {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (!saved) {
+        resetForm();
+        return;
+      }
+      try {
+        const draft = JSON.parse(saved);
+        Object.entries(draft).forEach(([key, value]) => {
+          const field = form.elements[key];
+          if (!field || key === "condition" || key === "media") return;
+          field.value = value;
+        });
+        if (draft.condition) {
+          const option = form.querySelector(`[name="condition"][value="${draft.condition}"]`);
+          if (option) option.checked = true;
+        }
+        mediaDraft = draft.media || [];
+        renderMediaDraft();
+      } catch {
+        resetForm();
+      }
+    }
+
+    function downloadExport() {
+      const blob = new Blob([JSON.stringify(packet(), null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "asset-mapping-survey-packet.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast("Survey packet downloaded");
+    }
+
+    document.querySelectorAll(".nav-item").forEach((button) => {
+      button.addEventListener("click", () => switchScreen(button.dataset.screen));
+    });
+
+    document.querySelectorAll(".filter").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".filter").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        activeFilter = button.dataset.filter;
+        renderRecords();
+      });
+    });
+
+    el("captureGps").addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        showToast("Location is not available in this browser");
+        return;
+      }
+      el("captureGps").textContent = "Locating...";
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude.toFixed(6);
+          const lng = position.coords.longitude.toFixed(6);
+          el("lat").value = lat;
+          el("lng").value = lng;
+          el("gpsChip").textContent = `GPS ${lat}, ${lng}`;
+          el("captureGps").textContent = "Use location";
+          showUserLocation(Number(lat), Number(lng), position.coords.accuracy);
+          showToast("Location captured on map");
+          saveDraft();
+        },
+        (error) => {
+          el("captureGps").textContent = "Use location";
+          const message = error.code === 1 ? "Location permission was denied" : "Could not capture location";
+          showToast(message);
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    });
+
+    form.addEventListener("input", () => {
+      el("draftLabel").textContent = "Draft updated";
+      saveDraft();
+    });
+
+    el("saveDraft").addEventListener("click", () => {
+      saveDraft();
+      showToast("Draft saved on this device");
+    });
+
+    el("controlProjectName").addEventListener("change", () => {
+      clearControlForm(el("controlProjectName").value);
+      renderControlList();
+    });
+
+    el("captureControlGps").addEventListener("click", () => {
+      captureControlLocation(false);
+    });
+
+    el("loadSelectedControl").addEventListener("click", () => {
+      selectedId = null;
+      clearControlForm(el("controlProjectName").value);
+      showToast("New control point form ready");
+    });
+
+    controlForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(controlForm).entries());
+      if ((data.controlType || "None") !== "None" && controlMediaDraft.length < 1) {
+        showToast("At least 1 control photograph is mandatory");
+        switchScreen("control");
+        return;
+      }
+      const projectName = data.controlProjectName || "Mohanpura";
+      const existingRecord = records.find((item) => item.id === selectedId && item.type === "Control");
+      const control = {
+        projectName,
+        type: data.controlType || "None",
+        id: data.controlId || "",
+        name: data.controlName || "",
+        surveyorName: data.surveyorName || "",
+        lat: data.controlLat || "",
+        lng: data.controlLng || "",
+        northing: data.northing || "",
+        easting: data.easting || "",
+        ellipsoidalHeight: data.ellipsoidalHeight || "",
+        elevation: data.controlElevation || "",
+        verticalDatum: data.verticalDatum || "",
+        dgpsAccuracy: data.dgpsAccuracy || "",
+        observationTime: data.observationTime || "",
+        droneFlightId: data.droneFlightId || "",
+        droneAltitude: data.droneAltitude || "",
+        description: data.controlDescription || "",
+        photos: controlMediaDraft.slice(0, 3)
+      };
+      const recordId = existingRecord?.id || `CP-${projectName.toUpperCase().slice(0, 3)}-${String(data.controlId || Date.now()).replace(/[^A-Za-z0-9-]/g, "-")}`;
+      const record = {
+        id: recordId,
+        projectName,
+        type: "Control",
+        name: control.name || control.id || "Ground control point",
+        lat: control.lat,
+        lng: control.lng,
+        chainage: "Ground control point",
+        span: control.type,
+        condition: "Good",
+        issue: control.description,
+        media: [],
+        control,
+        createdAt: existingRecord?.createdAt || new Date().toISOString()
+      };
+      const existingIndex = records.findIndex((item) => item.id === record.id);
+      if (existingIndex >= 0) records[existingIndex] = record;
+      else records.unshift(record);
+      selectedId = record.id;
+      saveRecords();
+      updateMetrics();
+      renderControlScreen();
+      renderRecords();
+      renderDetail();
+      showToast("Control point saved");
+      try {
+        if (await syncRecordToCloud(record)) showToast("Control point synced to cloud");
+      } catch (error) {
+        showToast(error.message || "Saved locally; cloud sync failed");
+      }
+    });
+
+    el("mediaInput").addEventListener("change", async (event) => {
+      const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/")).slice(0, 3);
+      if (!files.length) {
+        mediaDraft = [];
+        renderMediaDraft();
+        showToast("Add at least 1 photograph");
+        return;
+      }
+      mediaDraft = await Promise.all(files.map(async (file, index) => ({
+        label: `PHOTO ${index + 1}`,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        capturedAt: new Date().toISOString(),
+        url: await compressImage(file)
+      })));
+      localStorage.setItem(MEDIA_KEY, JSON.stringify(mediaDraft));
+      renderMediaDraft();
+      saveDraft();
+      showToast(`${files.length} photograph${files.length === 1 ? "" : "s"} attached`);
+    });
+
+    el("startControlCamera").addEventListener("click", startControlCamera);
+    el("captureControlPhoto").addEventListener("click", captureControlPhotoFromCamera);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (mediaDraft.length < 1) {
+        showToast("At least 1 photograph is mandatory");
+        switchScreen("survey");
+        return;
+      }
+      const data = Object.fromEntries(new FormData(form).entries());
+      const existingRecord = records.find((item) => item.id === (data.assetId || ""));
+      const record = {
+        id: data.assetId || nextId(),
+        projectName: data.projectName || existingRecord?.projectName || "Mohanpura",
+        type: data.assetType,
+        name: data.name,
+        lat: data.lat,
+        lng: data.lng,
+        chainage: data.chainage,
+        span: data.span,
+        condition: data.condition || "Good",
+        issue: data.issue,
+        control: existingRecord?.control || { type: "None", id: "", name: "", surveyorName: "", northing: "", easting: "", ellipsoidalHeight: "", elevation: "", verticalDatum: "", dgpsAccuracy: "", observationTime: "", droneFlightId: "", droneAltitude: "", description: "" },
+        media: mediaDraft.slice(0, 3),
+        createdAt: new Date().toISOString()
+      };
+      const existingIndex = records.findIndex((item) => item.id === record.id);
+      if (existingIndex >= 0) records[existingIndex] = record;
+      else records.unshift(record);
+      selectedId = record.id;
+      saveRecords();
+      localStorage.removeItem(DRAFT_KEY);
+      updateMetrics();
+      renderRecords();
+      renderControlScreen();
+      renderMapMarkers();
+      renderDetail();
+      resetForm();
+      showToast("Survey record submitted");
+      try {
+        if (await syncRecordToCloud(record)) showToast("Survey record synced to cloud");
+      } catch (error) {
+        showToast(error.message || "Saved locally; cloud sync failed");
+      }
+      switchScreen("detail");
+    });
+
+    el("editRecord").addEventListener("click", () => {
+      const record = records.find((item) => item.id === selectedId);
+      if (!record) return;
+      if (record.type === "Control") {
+        loadControlRecord(record.id);
+        switchScreen("control");
+        showToast("Control point loaded for editing");
+        return;
+      }
+      Object.entries({
+        assetType: record.type,
+        projectName: record.projectName || "Mohanpura",
+        assetId: record.id,
+        name: record.name,
+        lat: record.lat,
+        lng: record.lng,
+        chainage: record.chainage,
+        span: record.span,
+        issue: record.issue
+      }).forEach(([key, value]) => {
+        if (form.elements[key]) form.elements[key].value = value || "";
+      });
+      const option = form.querySelector(`[name="condition"][value="${record.condition}"]`);
+      if (option) option.checked = true;
+      mediaDraft = (record.media || []).map((item, index) => typeof item === "string" ? ({ label: `PHOTO ${index + 1}`, name: item }) : item);
+      renderMediaDraft();
+      switchScreen("survey");
+      showToast("Record loaded for editing");
+    });
+
+    el("deleteRecord").addEventListener("click", () => {
+      if (!selectedId) return;
+      records = records.filter((record) => record.id !== selectedId);
+      selectedId = records[0]?.id || null;
+      saveRecords();
+      updateMetrics();
+      renderRecords();
+      renderControlScreen();
+      renderMapMarkers();
+      renderDetail();
+      showToast("Record deleted");
+      switchScreen("map");
+    });
+
+    el("downloadExport").addEventListener("click", downloadExport);
+
+    el("zoomDetailAsset").addEventListener("click", () => {
+      renderDetailMap();
+      showToast("Focused selected asset on map");
+    });
+
+    cloudForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveCloudConfig({
+        url: cloudForm.elements.supabaseUrl.value.trim(),
+        anonKey: cloudForm.elements.supabaseAnonKey.value.trim()
+      });
+      showToast("Cloud connection saved");
+    });
+
+    el("syncCloud").addEventListener("click", () => {
+      syncAllToCloud().catch((error) => {
+        refreshCloudPanel("Cloud sync failed");
+        showToast(error.message || "Cloud sync failed");
+      });
+    });
+
+    el("loadCloudRecords").addEventListener("click", () => {
+      loadRecordsFromCloud().catch((error) => {
+        refreshCloudPanel("Cloud load failed");
+        showToast(error.message || "Cloud load failed");
+      });
+    });
+
+    el("copyExport").addEventListener("click", async () => {
+      const text = JSON.stringify(packet(), null, 2);
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("Packet copied");
+      } catch {
+        el("exportPreview").textContent = text;
+        showToast("Packet ready to select and copy");
+      }
+    });
+
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      navigator.serviceWorker.register("./asset-mapping-sw.js").catch(() => {});
+    }
+
+    restoreDraft();
+    refreshCloudPanel();
+    initializeMap();
+    initializeDetailMap();
+    initializeControlPointMap();
+    updateMetrics();
+    renderRecords();
+    renderControlScreen();
+    renderDetail();
+  </script>
+</body>
+</html>
