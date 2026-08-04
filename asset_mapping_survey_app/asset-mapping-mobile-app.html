@@ -179,6 +179,36 @@
       font-size: 13px;
     }
 
+    .leaflet-control-layers {
+      border: 1px solid rgba(18, 58, 67, 0.18) !important;
+      border-radius: 8px !important;
+      box-shadow: 0 10px 22px rgba(23, 32, 31, 0.18) !important;
+      overflow: hidden;
+    }
+
+    .leaflet-control-layers-toggle {
+      width: 42px !important;
+      height: 42px !important;
+      background-color: rgba(255, 255, 255, 0.96) !important;
+      background-size: 25px 25px !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23123a43'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='m12%202%209%205-9%205-9-5%209-5Z'/%3E%3Cpath%20d='m3%2012%209%205%209-5'/%3E%3Cpath%20d='m3%2017%209%205%209-5'/%3E%3C/svg%3E") !important;
+    }
+
+    .leaflet-control-layers-expanded {
+      padding: 8px 10px !important;
+      background: rgba(255, 255, 255, 0.97) !important;
+    }
+
+    .leaflet-control-layers-base label {
+      display: block;
+      margin: 6px 0;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
     .map-pin {
       width: 27px;
       height: 27px;
@@ -1339,7 +1369,8 @@
         attribution: "Labels &copy; Esri"
       });
       const satelliteWithLabels = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(map);
+      const basemapControl = L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(map);
+      setBasemapControlTitle(basemapControl);
       assetLayer = L.layerGroup().addTo(map);
       renderMapMarkers();
       setTimeout(() => map.invalidateSize(), 120);
@@ -1367,7 +1398,8 @@
         attribution: "Labels &copy; Esri"
       });
       const satelliteWithLabels = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(detailMap);
+      const basemapControl = L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteWithLabels }, {}, { collapsed: true }).addTo(detailMap);
+      setBasemapControlTitle(basemapControl);
       detailLayer = L.layerGroup().addTo(detailMap);
       setTimeout(() => detailMap.invalidateSize(), 120);
     }
@@ -1394,13 +1426,21 @@
         attribution: "Labels &copy; Esri"
       });
       const satelliteHybrid = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({
+      const basemapControl = L.control.layers({
         "ArcGIS Online Streets": streetLayer,
         "ArcGIS Satellite": satelliteLayer,
         "ArcGIS Satellite Hybrid": satelliteHybrid
       }, {}, { collapsed: true }).addTo(controlPointMap);
+      setBasemapControlTitle(basemapControl);
       controlPointLayer = L.layerGroup().addTo(controlPointMap);
       setTimeout(() => controlPointMap.invalidateSize(), 120);
+    }
+
+    function setBasemapControlTitle(control) {
+      const toggle = control?.getContainer?.().querySelector(".leaflet-control-layers-toggle");
+      if (!toggle) return;
+      toggle.title = "Select basemap";
+      toggle.setAttribute("aria-label", "Select basemap");
     }
 
     function renderControlPointMarker(lat, lng, label = "Control point") {
