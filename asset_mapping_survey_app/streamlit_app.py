@@ -3,10 +3,11 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
+from streamlit_dashboard import render_dashboard
+
 
 ROOT = Path(__file__).parent
 MOBILE_APP = ROOT / "asset-mapping-mobile-app.html"
-DASHBOARD_APP = ROOT / "control-points-dashboard.html"
 
 
 st.set_page_config(
@@ -98,4 +99,4 @@ view = st.sidebar.radio(
 if view == "Mobile survey app":
     components.html(load_html(MOBILE_APP), height=1080, scrolling=True)
 else:
-    components.html(load_html(DASHBOARD_APP), height=1080, scrolling=True)
+    render_dashboard()
