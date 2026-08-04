@@ -44,13 +44,26 @@ streamlit run streamlit_dashboard.py
 
 1. Create a Supabase project.
 2. Run `supabase-postgis-setup.sql` in the Supabase SQL editor.
-3. Open the app, go to `Cloud + Export`, paste the Supabase anon public key, and sync records.
+3. Open the app, go to `Online Report + Export`, paste the Supabase public / publishable key, and sync records.
 
 The current Supabase project URL is prefilled:
 
 ```text
 https://lagrhtwsomtwvwkhtchg.supabase.co
 ```
+
+## GitHub / Streamlit Secrets
+
+For hosted Streamlit deployment, add these repository or deployment secrets:
+
+```text
+SUPABASE_URL=https://lagrhtwsomtwvwkhtchg.supabase.co
+SUPABASE_ANON_KEY=<paste Supabase public or publishable key>
+```
+
+Use the public/publishable client key only. Do not store a `service_role`, `sb_secret_*`, or database password in browser-facing pages.
+
+For Streamlit Community Cloud, add the same values in the app's Secrets settings. For local development, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and fill in the key.
 
 ## Recommended Use
 
