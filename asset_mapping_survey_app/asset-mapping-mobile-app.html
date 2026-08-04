@@ -171,6 +171,16 @@
 
     .sync-now-count:empty { display: none; }
 
+    .sync-now.failed {
+      color: var(--risk);
+      border-color: rgba(175, 53, 53, 0.35);
+      background: rgba(175, 53, 53, 0.08);
+    }
+
+    .sync-now.syncing svg { animation: spinSync 900ms linear infinite; }
+
+    @keyframes spinSync { to { transform: rotate(360deg); } }
+
     main { padding: 14px; }
     .screen { display: none; }
     .screen.active { display: block; }
@@ -1137,18 +1147,31 @@
       return window.supabase.createClient(config.url, config.anonKey);
     }
 
+    function syncSummary() {
+      return records.reduce((summary, record) => {
+        if (record.syncStatus === "online") summary.online += 1;
+        else if (record.syncStatus === "failed") summary.failed += 1;
+        else summary.pending += 1;
+        return summary;
+      }, { online: 0, pending: 0, failed: 0 });
+    }
+
     function refreshCloudPanel(message = "") {
       const config = loadCloudConfig();
       if (el("supabaseUrl")) el("supabaseUrl").value = config.url || "";
       if (el("supabaseAnonKey")) el("supabaseAnonKey").value = config.anonKey || "";
       const ready = Boolean(config.url && config.anonKey);
-      const pending = records.filter((record) => record.syncStatus !== "online").length;
+      const { pending, failed } = syncSummary();
+      const unsynced = pending + failed;
       const fileHint = location.protocol === "file:" ? " Open the http app link for best sync." : "";
       el("cloudStatus").textContent = message || (ready ? "Online report connected" : `Online report not connected.${fileHint}`);
-      el("cloudRecordCount").textContent = pending ? `${pending} pending online / ${records.length} local` : `${records.length} local record${records.length === 1 ? "" : "s"}`;
-      el("syncLabel").textContent = ready ? "Online report ready" : "Offline ready";
-      if (el("mobileSyncCount")) el("mobileSyncCount").textContent = pending ? String(Math.min(pending, 99)) : "";
-      if (el("mobileSyncNow")) el("mobileSyncNow").title = pending ? `${pending} record${pending === 1 ? "" : "s"} pending online` : "All records posted online";
+      el("cloudRecordCount").textContent = unsynced ? `${unsynced} not online / ${records.length} local` : `${records.length} local record${records.length === 1 ? "" : "s"}`;
+      el("syncLabel").textContent = !ready ? "Offline ready" : failed ? `${failed} failed` : pending ? `${pending} pending` : "All synced";
+      if (el("mobileSyncCount")) el("mobileSyncCount").textContent = failed ? "!" : unsynced ? String(Math.min(unsynced, 99)) : "";
+      if (el("mobileSyncNow")) {
+        el("mobileSyncNow").classList.toggle("failed", failed > 0);
+        el("mobileSyncNow").title = failed ? `${failed} record${failed === 1 ? "" : "s"} failed. Tap to retry.` : unsynced ? `${unsynced} record${unsynced === 1 ? "" : "s"} pending online` : "All records posted online";
+      }
     }
 
     function base64ToBlob(dataUrl) {
@@ -1217,7 +1240,7 @@
     }
 
     function cloudRowToRecord(row) {
-      return normalizeRecord(row.payload || {
+      const record = normalizeRecord(row.payload || {
         id: row.id,
         projectName: row.project_name,
         type: row.record_type,
@@ -1227,6 +1250,12 @@
         lng: row.longitude,
         createdAt: row.created_at
       });
+      return {
+        ...record,
+        syncStatus: "online",
+        syncedAt: record.syncedAt || row.updated_at || row.created_at || new Date().toISOString(),
+        lastSyncError: ""
+      };
     }
 
     async function syncRecordToCloud(record) {
@@ -1279,31 +1308,38 @@
     async function syncAllToCloud({ onlyPending = false } = {}) {
       const client = getSupabaseClient();
       if (!client) {
+        refreshCloudPanel("Online report not connected - save Supabase key");
         showToast("Save Supabase connection first");
-        return;
+        return { synced: 0, failed: syncSummary().pending + syncSummary().failed, reason: "not_connected" };
       }
       const recordsToPost = onlyPending ? records.filter((record) => record.syncStatus !== "online") : records;
       if (!recordsToPost.length) {
         refreshCloudPanel("No pending records to post");
         showToast("No pending records to post");
-        return;
+        return { synced: 0, failed: 0, reason: "none_pending" };
       }
+      if (el("mobileSyncNow")) el("mobileSyncNow").classList.add("syncing");
       el("cloudStatus").textContent = "Posting records to online report...";
       let synced = 0;
       let failed = 0;
-      for (const record of recordsToPost) {
-        try {
-          await syncRecordToCloud(record);
-          markRecordSyncState(record.id, "online");
-          synced += 1;
-        } catch (error) {
-          failed += 1;
-          markRecordSyncState(record.id, "failed", error.message || "Online report post failed");
+      try {
+        for (const record of recordsToPost) {
+          try {
+            await syncRecordToCloud(record);
+            markRecordSyncState(record.id, "online");
+            synced += 1;
+          } catch (error) {
+            failed += 1;
+            markRecordSyncState(record.id, "failed", error.message || "Online report post failed");
+          }
+          el("cloudRecordCount").textContent = `${synced}/${recordsToPost.length} posted`;
         }
-        el("cloudRecordCount").textContent = `${synced}/${recordsToPost.length} posted`;
+      } finally {
+        if (el("mobileSyncNow")) el("mobileSyncNow").classList.remove("syncing");
       }
       refreshCloudPanel(failed ? `${synced} posted, ${failed} failed` : `${synced} records posted to online report`);
       showToast(failed ? "Some records still need retry" : "Online report updated");
+      return { synced, failed, reason: failed ? "failed" : "posted" };
     }
 
     async function loadRecordsFromCloud() {
@@ -2333,17 +2369,20 @@
     });
 
     el("syncCloud").addEventListener("click", () => {
-      syncAllToCloud().catch((error) => {
+      syncAllToCloud({ onlyPending: true }).catch((error) => {
         refreshCloudPanel("Online report post failed");
         showToast(error.message || "Online report post failed");
       });
     });
 
-    el("mobileSyncNow").addEventListener("click", () => {
-      syncAllToCloud({ onlyPending: true }).catch((error) => {
+    el("mobileSyncNow").addEventListener("click", async () => {
+      try {
+        const result = await syncAllToCloud({ onlyPending: true });
+        if (result?.reason === "not_connected") switchScreen("export");
+      } catch (error) {
         refreshCloudPanel("Online report post failed");
         showToast(error.message || "Online report post failed");
-      });
+      }
     });
 
     el("loadCloudRecords").addEventListener("click", () => {
