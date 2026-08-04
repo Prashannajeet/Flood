@@ -12,6 +12,7 @@ import streamlit.components.v1 as components
 
 ROOT = Path(__file__).parent
 DEFAULT_SUPABASE_URL = "https://lagrhtwsomtwvwkhtchg.supabase.co"
+DEFAULT_SUPABASE_PUBLIC_KEY = "sb_publishable_psnxDFww63WTVfKg5l8bfw_DisSgEBp"
 CLOUD_TABLE = "field_records"
 
 
@@ -363,7 +364,7 @@ def render_dashboard() -> None:
             )
         with col2:
             secret_key = secret_value("SUPABASE_SECRET_KEY", "")
-            fallback_key = secret_value("SUPABASE_ANON_KEY", "")
+            fallback_key = secret_value("SUPABASE_ANON_KEY", DEFAULT_SUPABASE_PUBLIC_KEY)
             api_key = st.text_input(
                 "Supabase server key",
                 value=secret_key or fallback_key,

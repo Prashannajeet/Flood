@@ -1101,6 +1101,7 @@
     const CLOUD_TABLE = "field_records";
     const PHOTO_BUCKET = "asset-photos";
     const DEFAULT_SUPABASE_URL = "https://lagrhtwsomtwvwkhtchg.supabase.co";
+    const DEFAULT_SUPABASE_PUBLIC_KEY = "sb_publishable_psnxDFww63WTVfKg5l8bfw_DisSgEBp";
 
     const seedRecords = [];
 
@@ -1131,9 +1132,9 @@
 
     function loadCloudConfig() {
       try {
-        return { url: DEFAULT_SUPABASE_URL, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
+        return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
       } catch {
-        return { url: DEFAULT_SUPABASE_URL };
+        return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY };
       }
     }
 

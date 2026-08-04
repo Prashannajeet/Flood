@@ -557,6 +557,7 @@
     const CLOUD_CONFIG_KEY = "assetMappingSupabaseConfigV1";
     const CLOUD_TABLE = "field_records";
     const DEFAULT_SUPABASE_URL = "https://lagrhtwsomtwvwkhtchg.supabase.co";
+    const DEFAULT_SUPABASE_PUBLIC_KEY = "sb_publishable_psnxDFww63WTVfKg5l8bfw_DisSgEBp";
     const colors = { Dam: "#59686f", Road: "#b45f31", River: "#1c7d99", Canal: "#2f8f67" };
     const controlColors = { "DGPS BM": "#123a43", "DGPS TBM": "#59686f", "Drone GCP": "#1c7d99", "Drone Checkpoint": "#2f8f67" };
     const seedRecords = [];
@@ -576,9 +577,9 @@
 
     function loadCloudConfig() {
       try {
-        return { url: DEFAULT_SUPABASE_URL, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
+        return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY, ...JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY) || "{}") };
       } catch {
-        return { url: DEFAULT_SUPABASE_URL };
+        return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_PUBLIC_KEY };
       }
     }
 
