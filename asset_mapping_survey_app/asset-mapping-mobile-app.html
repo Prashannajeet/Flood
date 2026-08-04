@@ -1394,7 +1394,11 @@
         attribution: "Labels &copy; Esri"
       });
       const satelliteHybrid = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({ "ArcGIS Online Streets": streetLayer, "ArcGIS Satellite Hybrid": satelliteHybrid }, {}, { collapsed: true }).addTo(controlPointMap);
+      L.control.layers({
+        "ArcGIS Online Streets": streetLayer,
+        "ArcGIS Satellite": satelliteLayer,
+        "ArcGIS Satellite Hybrid": satelliteHybrid
+      }, {}, { collapsed: true }).addTo(controlPointMap);
       controlPointLayer = L.layerGroup().addTo(controlPointMap);
       setTimeout(() => controlPointMap.invalidateSize(), 120);
     }
