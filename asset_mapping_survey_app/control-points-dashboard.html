@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DGPS Control Points Dashboard</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ2ATbHW5nku1E0FjJZ6dgK7wzHDBrA=" crossorigin="">
+  <link rel="stylesheet" href="https://js.arcgis.com/4.33/esri/themes/light/main.css">
   <style>
     :root {
       --ink: #162321;
@@ -147,8 +147,24 @@
       background: #dce8e5;
     }
 
-    .leaflet-control-attribution { font-size: 10px; }
-    .leaflet-popup-content { margin: 10px 12px; color: var(--ink); font-size: 13px; }
+    .esri-view .esri-view-surface { outline: none; }
+    .esri-attribution { font-size: 10px; }
+    .esri-popup__main-container { border-radius: 8px; }
+    .map-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .map-tools select {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 28px 6px 10px;
+      color: var(--ink);
+      background: #fbfcfb;
+      font-size: 12px;
+      font-weight: 800;
+    }
 
     .popup-menu {
       min-width: 240px;
@@ -405,7 +421,14 @@
       <div class="panel map-panel">
         <div class="panel-header">
           <h2>Control Map</h2>
-          <span class="muted" id="mapStatus">ArcGIS Online basemap</span>
+          <div class="map-tools">
+            <select id="arcgisBasemap" aria-label="ArcGIS basemap">
+              <option value="streets-vector">ArcGIS Streets</option>
+              <option value="satellite">ArcGIS Satellite</option>
+              <option value="hybrid">ArcGIS Satellite Hybrid</option>
+            </select>
+            <span class="muted" id="mapStatus">ArcGIS Online map</span>
+          </div>
         </div>
         <div id="controlMap" role="application" aria-label="Map of DGPS and drone control points"></div>
       </div>
@@ -487,7 +510,7 @@
     </section>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://js.arcgis.com/4.33/"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const STORAGE_KEY = "assetMappingRecordsV3";
@@ -499,9 +522,14 @@
     const seedRecords = [];
 
     let map;
+    let view;
     let layer;
     let selectedId = null;
     let markers = new Map();
+    let ArcGISMap;
+    let MapView;
+    let GraphicsLayer;
+    let Graphic;
 
     const el = (id) => document.getElementById(id);
 
@@ -648,12 +676,6 @@
       return value ? Number(value[1]) : null;
     }
 
-    function markerHtml(record, selected = false) {
-      const label = record.control.type.includes("Drone") ? "DR" : record.control.type.includes("TBM") ? "TBM" : "BM";
-      const color = controlColors[record.control.type] || colors[record.type] || "#123a43";
-      return `<div class="control-pin ${selected ? "selected" : ""}" style="background:${color}">${label}</div>`;
-    }
-
     function popupMenu(record) {
       const control = record.control || {};
       const photos = (control.photos?.length ? control.photos : record.media) || [];
@@ -678,58 +700,81 @@
     }
 
     function initMap() {
-      if (typeof L === "undefined") {
+      if (!window.require) {
         el("controlMap").innerHTML = `<div class="empty">ArcGIS Online map could not load. Check internet access and refresh.</div>`;
         return;
       }
-      map = L.map("controlMap").setView([21.1498, 79.0806], 15);
-      const streetLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 19,
-        attribution: "Tiles &copy; Esri"
-      }).addTo(map);
-      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 19,
-        attribution: "Tiles &copy; Esri"
+      window.require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/GraphicsLayer",
+        "esri/Graphic"
+      ], (LoadedMap, LoadedMapView, LoadedGraphicsLayer, LoadedGraphic) => {
+        ArcGISMap = LoadedMap;
+        MapView = LoadedMapView;
+        GraphicsLayer = LoadedGraphicsLayer;
+        Graphic = LoadedGraphic;
+        layer = new GraphicsLayer({ title: "DGPS Control Points" });
+        map = new ArcGISMap({
+          basemap: el("arcgisBasemap").value,
+          layers: [layer]
+        });
+        view = new MapView({
+          container: "controlMap",
+          map,
+          center: [79.0806, 21.1498],
+          zoom: 15,
+          popup: { dockEnabled: false }
+        });
+        view.when(() => {
+          view.on("click", async (event) => {
+            const response = await view.hitTest(event);
+            const hit = response.results.find((item) => item.graphic && item.graphic.attributes?.id);
+            if (hit) selectRecord(hit.graphic.attributes.id);
+          });
+          render();
+        });
+      }, () => {
+        el("controlMap").innerHTML = `<div class="empty">ArcGIS Online map could not load. Check internet access and refresh.</div>`;
       });
-      const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 19,
-        attribution: "Labels &copy; Esri"
-      });
-      const satelliteWithLabels = L.layerGroup([satelliteLayer, labelLayer]);
-      L.control.layers({
-        "ArcGIS Online Streets": streetLayer,
-        "ArcGIS Satellite": satelliteLayer,
-        "ArcGIS Satellite Hybrid": satelliteWithLabels
-      }, {}, { collapsed: false }).addTo(map);
-      layer = L.layerGroup().addTo(map);
-      setTimeout(() => map.invalidateSize(), 100);
     }
 
     function renderMap(rows) {
-      if (!map || !layer || typeof L === "undefined") return;
-      layer.clearLayers();
+      if (!view || !layer || !Graphic) return;
+      layer.removeAll();
       markers = new Map();
-      const bounds = [];
+      const points = [];
       rows.forEach((record) => {
         const lat = Number(record.control.lat || record.lat);
         const lng = Number(record.control.lng || record.lng);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-        bounds.push([lat, lng]);
+        points.push([lng, lat]);
         const selected = record.id === selectedId;
-        const marker = L.marker([lat, lng], {
-          icon: L.divIcon({
-            className: "",
-            html: markerHtml(record, selected),
-            iconSize: selected ? [38, 38] : [30, 30],
-            iconAnchor: selected ? [19, 19] : [15, 15],
-            popupAnchor: [0, -18]
-          })
-        }).addTo(layer);
-        marker.bindPopup(popupMenu(record), { maxWidth: 340 });
-        marker.on("click", () => selectRecord(record.id));
-        markers.set(record.id, marker);
+        const label = record.control.type.includes("Drone") ? "DR" : record.control.type.includes("TBM") ? "TBM" : "BM";
+        const color = controlColors[record.control.type] || colors[record.type] || "#123a43";
+        const graphic = new Graphic({
+          geometry: { type: "point", longitude: lng, latitude: lat },
+          symbol: {
+            type: "simple-marker",
+            style: "circle",
+            color,
+            size: selected ? 20 : 14,
+            outline: { color: selected ? "#ffffff" : "#f7f5ee", width: selected ? 4 : 2 }
+          },
+          attributes: { id: record.id, label },
+          popupTemplate: {
+            title: record.control.name || record.control.id || record.id,
+            content: popupMenu(record)
+          }
+        });
+        layer.add(graphic);
+        markers.set(record.id, graphic);
       });
-      if (bounds.length) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+      if (points.length === 1) {
+        view.goTo({ center: points[0], zoom: 17 }).catch(() => {});
+      } else if (points.length > 1) {
+        view.goTo(layer.graphics).catch(() => {});
+      }
       el("mapStatus").textContent = `${rows.length} mapped control${rows.length === 1 ? "" : "s"}`;
     }
 
@@ -838,10 +883,13 @@
     function selectRecord(id) {
       selectedId = id;
       render();
-      const marker = markers.get(id);
-      if (marker && map) {
-        map.setView(marker.getLatLng(), Math.max(map.getZoom(), 17));
-        marker.openPopup();
+      const graphic = markers.get(id);
+      if (graphic && view) {
+        view.goTo({ target: graphic.geometry, zoom: Math.max(view.zoom || 15, 17) }).catch(() => {});
+        view.popup.open({
+          features: [graphic],
+          location: graphic.geometry
+        });
       }
     }
 
@@ -884,6 +932,9 @@
 
     ["searchInput", "projectFilter", "typeFilter", "assetFilter"].forEach((id) => {
       el(id).addEventListener("input", render);
+    });
+    el("arcgisBasemap").addEventListener("change", () => {
+      if (map) map.basemap = el("arcgisBasemap").value;
     });
     el("downloadCsv").addEventListener("click", downloadCsv);
     el("loadCloud").addEventListener("click", () => loadCloudRecords());
