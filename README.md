@@ -1,6 +1,6 @@
-# Mohanpura Kundaliya Dam Break & EAP Project
+# NITA AI - Mohanpura Kundaliya Dam Break & EAP Project
 
-Streamlit deployment package for the GIS dashboard.
+Streamlit deployment package for the NITA AI branded GIS dashboard.
 
 ## Streamlit Cloud settings
 

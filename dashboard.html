@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mohanpura Kundaliya Dam Break & EAP Project - Report V1 Compact</title>
+<title>NITA AI - Mohanpura Kundaliya Dam Break & EAP Project</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
@@ -116,6 +116,8 @@ body.report-v1 .app { width:95vw; max-width:95vw; height:100vh; margin:0 auto; p
 body.report-v1 .topbar { padding:7px 10px; margin-bottom:5px; gap:10px; background:#ffffff; border:1px solid #d7edf3; box-shadow:0 8px 22px rgba(56,111,133,.08); }
 body.report-v1 h1 { font-size:21px; line-height:1.05; color:#12313f; }
 .version-tag { display:inline-block; color:#2f80b7; font-size:13px; font-weight:700; margin-left:8px; vertical-align:middle; }
+.brand-mark { display:inline-flex; align-items:center; gap:6px; color:#0f5f75; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px; }
+.brand-mark::before { content:""; width:9px; height:9px; border-radius:50%; background:#2f80b7; box-shadow:11px 0 0 #95ccdd; }
 body.report-v1 .sub { font-size:12px; margin-top:2px; color:#5b7580; }
 body.report-v1 .controls { gap:6px; }
 body.report-v1 label { font-size:12px; gap:3px; color:#496773; }
@@ -183,8 +185,9 @@ body.report-v1 .leaflet-top.leaflet-right { max-width:340px; }
 <main class="app">
   <header class="topbar">
     <div>
+      <div class="brand-mark">NITA AI</div>
       <h1>Mohanpura Kundaliya Dam Break & EAP Project <span class="version-tag">Report V1</span></h1>
-      <div class="sub">Compact non-scrolling dashboard for SUG/subminor hydrology, gauges, rainfall, and GIS review</div>
+      <div class="sub">NITA AI dashboard for SUG/subminor hydrology, gauges, rainfall, and GIS review</div>
     </div>
     <div class="controls">
       <label>Gauge station<select id="stationSelect"></select></label>

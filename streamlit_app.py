@@ -8,7 +8,7 @@ APP_DIR = Path(__file__).resolve().parent
 DASHBOARD_FILE = APP_DIR / "dashboard.html"
 
 st.set_page_config(
-    page_title="Mohanpura Kundaliya Dam Break & EAP Project",
+    page_title="NITA AI - Mohanpura Kundaliya Dam Break & EAP Project",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
