@@ -1,4 +1,4 @@
-const CACHE_NAME = "asset-mapping-v26";
+const CACHE_NAME = "asset-mapping-v27";
 const ASSETS = [
   "./asset-mapping-mobile-app.html",
   "./control-points-dashboard.html",

@@ -11,8 +11,8 @@ MOBILE_APP = ROOT / "asset-mapping-mobile-app.html"
 
 
 st.set_page_config(
-    page_title="Asset Mapping Survey",
-    page_icon="AM",
+    page_title="MonsoonReady Urban Inspection",
+    page_icon="🌧️",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -97,6 +97,6 @@ view = st.sidebar.radio(
 )
 
 if view == "Mobile survey app":
-    components.html(load_html(MOBILE_APP), height=1080, scrolling=True)
+    components.html(load_html(MOBILE_APP), height=1600, scrolling=True)
 else:
     render_dashboard()

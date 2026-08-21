@@ -9,7 +9,7 @@
   <link rel="manifest" href="./asset-mapping.webmanifest">
   <link rel="icon" href="./asset-mapping-icon.svg">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ2ATbHW5nku1E0FjJZ6dgK7wzHDBrA=" crossorigin="">
-  <title>Asset Mapping Mobile App</title>
+  <title>MonsoonReady | Urban Asset Inspection</title>
   <style>
     :root {
       --ink: #162321;
@@ -737,10 +737,10 @@
   <div class="phone">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark">AM</div>
+        <div class="brand-mark">MR</div>
         <div>
-          <h1>Asset Mapping</h1>
-          <p>Dam, river, canal and road survey</p>
+          <h1>MonsoonReady</h1>
+          <p>Pre-monsoon urban asset inspection</p>
         </div>
       </div>
       <div class="header-actions">
@@ -762,7 +762,7 @@
         <div class="summary">
           <div class="metric">
             <b id="totalCount">0</b>
-            <span>Total saved survey records</span>
+            <span>Assets inspected this survey</span>
           </div>
           <div class="metric">
             <b id="criticalCount">0</b>
@@ -799,10 +799,10 @@
 
         <div class="filters" aria-label="Filter records">
           <button class="filter active" type="button" data-filter="All">All</button>
-          <button class="filter" type="button" data-filter="Dam">Dam</button>
-          <button class="filter" type="button" data-filter="River">River</button>
-          <button class="filter" type="button" data-filter="Canal">Canal</button>
-          <button class="filter" type="button" data-filter="Control">Control</button>
+          <button class="filter" type="button" data-filter="Stormwater Drain">Stormwater</button>
+          <button class="filter" type="button" data-filter="Sewer Drain">Drainage</button>
+          <button class="filter" type="button" data-filter="Culvert">Culverts</button>
+          <button class="filter" type="button" data-filter="Pothole">Potholes</button>
         </div>
 
         <div class="section-title">
@@ -814,28 +814,33 @@
 
       <section class="screen" id="screen-survey">
         <div class="section-title">
-          <h2>New Survey Record</h2>
+          <h2>New Inspection</h2>
           <span id="draftLabel">Draft saved locally</span>
         </div>
 
         <form id="surveyForm">
           <div class="grid-2">
             <div class="field">
-              <label for="projectName">Project</label>
+              <label for="projectName">Survey zone</label>
               <select id="projectName" name="projectName" required>
-                <option value="Mohanpura">1: Mohanpura</option>
-                <option value="Kundaliya">2: Kundaliya</option>
+                <option value="Central Zone">Central Zone</option>
+                <option value="North Zone">North Zone</option>
+                <option value="South Zone">South Zone</option>
+                <option value="East Zone">East Zone</option>
+                <option value="West Zone">West Zone</option>
               </select>
             </div>
             <div class="field">
               <label for="assetType">Asset type</label>
               <select id="assetType" name="assetType" required>
-                <option value="Dam">Dam asset</option>
-                <option value="Road">Road over river/nala/channel</option>
-                <option value="River">River protection work</option>
-                <option value="Canal">Canal asset</option>
-                <option value="Road">Bridge / culvert</option>
-                <option value="River">Embankment</option>
+                <option value="Stormwater Drain">Stormwater drain</option>
+                <option value="Sewer Drain">Sewer / roadside drain</option>
+                <option value="Culvert">Culvert / cross drainage</option>
+                <option value="Pothole">Pothole / road distress</option>
+                <option value="Catch Basin">Catch basin / inlet</option>
+                <option value="Manhole">Manhole / chamber</option>
+                <option value="Outfall">Drain outfall</option>
+                <option value="Waterlogging">Waterlogging hotspot</option>
               </select>
             </div>
           </div>
@@ -846,8 +851,8 @@
           </div>
 
           <div class="field">
-            <label for="name">Asset name / location</label>
-            <input id="name" name="name" placeholder="Village, chainage, structure name" required>
+            <label for="name">Asset name / landmark</label>
+            <input id="name" name="name" placeholder="Road, junction or nearest landmark" required>
           </div>
 
           <div class="grid-2">
@@ -863,12 +868,23 @@
 
           <div class="grid-2">
             <div class="field">
-              <label for="chainage">Chainage / km</label>
-              <input id="chainage" name="chainage" placeholder="e.g. RD 4.250">
+              <label for="chainage">Ward / street</label>
+              <input id="chainage" name="chainage" placeholder="e.g. Ward 12, Station Road">
             </div>
             <div class="field">
-              <label for="span">Length / span</label>
-              <input id="span" name="span" placeholder="e.g. 18 m">
+              <label for="span">Size / affected length</label>
+              <input id="span" name="span" placeholder="e.g. 18 m or 2 × 1 m">
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="inspector">Inspector name</label>
+              <input id="inspector" name="inspector" placeholder="Field officer" required>
+            </div>
+            <div class="field">
+              <label for="inspectionDate">Inspection date</label>
+              <input id="inspectionDate" name="inspectionDate" type="date" required>
             </div>
           </div>
 
@@ -885,8 +901,25 @@
           </div>
 
           <div class="field">
+            <label for="blockage">Flow obstruction</label>
+            <select id="blockage" name="blockage">
+              <option value="None">None — free flowing</option>
+              <option value="Low">Low — less than 25%</option>
+              <option value="Moderate">Moderate — 25–50%</option>
+              <option value="Severe">Severe — over 50%</option>
+              <option value="Fully blocked">Fully blocked</option>
+              <option value="Not applicable">Not applicable</option>
+            </select>
+          </div>
+
+          <div class="field">
             <label for="issue">Observed issue</label>
-            <textarea id="issue" name="issue" placeholder="Damage, erosion, settlement, overtopping mark, blockage, missing guard stone"></textarea>
+            <textarea id="issue" name="issue" placeholder="Silt, solid waste, broken cover, collapse, pothole depth, standing water or encroachment"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="action">Recommended action before monsoon</label>
+            <textarea id="action" name="action" placeholder="Desilt, jet clean, repair cover, patch road, remove waste or escalate"></textarea>
           </div>
 
           <div class="field">
@@ -916,8 +949,11 @@
           <div class="field">
             <label for="controlProjectName">Project</label>
             <select id="controlProjectName" name="controlProjectName" required>
-              <option value="Mohanpura">1: Mohanpura</option>
-              <option value="Kundaliya">2: Kundaliya</option>
+              <option value="Central Zone">Central Zone</option>
+              <option value="North Zone">North Zone</option>
+              <option value="South Zone">South Zone</option>
+              <option value="East Zone">East Zone</option>
+              <option value="West Zone">West Zone</option>
             </select>
           </div>
 
@@ -960,7 +996,7 @@
           <div class="grid-2">
             <div class="field">
               <label for="controlName">DGPS BM / TBM name</label>
-              <input id="controlName" name="controlName" placeholder="e.g. Mohanpura TBM near spillway">
+              <input id="controlName" name="controlName" placeholder="e.g. Central Zone TBM near spillway">
             </div>
             <div class="field">
               <label for="surveyorName">Surveyor name</label>
@@ -1154,8 +1190,15 @@
 
     const seedRecords = [];
 
-    const colors = { Dam: "#59686f", Road: "#b45f31", River: "#1c7d99", Canal: "#2f8f67", Control: "#123a43" };
-    const icons = { Dam: "DM", Road: "RD", River: "RP", Canal: "CA", Control: "CP" };
+    const colors = {
+      "Stormwater Drain": "#1c7d99", "Sewer Drain": "#59686f", Culvert: "#2f8f67",
+      Pothole: "#ba3d34", "Catch Basin": "#7254a3", Manhole: "#8a6428",
+      Outfall: "#147a7e", Waterlogging: "#bd7f1d", Control: "#123a43"
+    };
+    const icons = {
+      "Stormwater Drain": "SW", "Sewer Drain": "DR", Culvert: "CU", Pothole: "PH",
+      "Catch Basin": "CB", Manhole: "MH", Outfall: "OF", Waterlogging: "WL", Control: "CP"
+    };
     const scores = { Good: 86, Watch: 58, Critical: 28 };
     let records = loadRecords();
     let selectedId = records[0]?.id || null;
@@ -1303,7 +1346,7 @@
       const photoCount = ((record.media || []).length + ((record.control && record.control.photos) || []).length);
       return {
         id: record.id,
-        project_name: record.projectName || "Mohanpura",
+        project_name: record.projectName || "Central Zone",
         record_type: record.type,
         asset_name: record.name || "",
         condition: record.condition || "Good",
@@ -1480,7 +1523,7 @@
           if (!existingIds.has(controlId)) {
             output.push({
               id: controlId,
-              projectName: record.projectName || control.projectName || "Mohanpura",
+              projectName: record.projectName || control.projectName || "Central Zone",
               type: "Control",
               name: control.name || control.id || "Control point",
               lat: control.lat || record.lat || "",
@@ -1490,7 +1533,7 @@
               condition: "Good",
               issue: control.description || "",
               media: [],
-              control: { ...control, projectName: record.projectName || control.projectName || "Mohanpura" },
+              control: { ...control, projectName: record.projectName || control.projectName || "Central Zone" },
               createdAt: control.createdAt || record.createdAt || new Date().toISOString()
             });
             existingIds.add(controlId);
@@ -1504,7 +1547,7 @@
     function normalizeRecord(record) {
       return {
         ...record,
-        projectName: record.projectName || (record.id === "AM-2026-003" || record.id === "AM-2026-004" ? "Kundaliya" : "Mohanpura"),
+        projectName: record.projectName || (record.id === "AM-2026-003" || record.id === "AM-2026-004" ? "North Zone" : "Central Zone"),
         syncStatus: record.syncStatus || "pending",
         lastSyncError: record.lastSyncError || "",
         control: {
@@ -1577,7 +1620,7 @@
       return {
         packetName: "Asset mapping survey field packet",
         generatedAt: new Date().toISOString(),
-        surveyScope: ["Dam assets", "Road inventories over river/nala/channel", "River protection works", "Canal assets", "DGPS BM/TBM control", "Drone GCP/checkpoint control"],
+        surveyScope: ["Stormwater drains", "Sewer and roadside drains", "Culverts", "Potholes", "Catch basins", "Manholes", "Outfalls", "Waterlogging hotspots"],
         recordCount: records.length,
         controlPointCount: controlRecords.length,
         controlProvision: {
@@ -1587,7 +1630,7 @@
             assetId: record.id,
             assetName: record.name,
             assetType: record.type,
-            projectName: record.projectName || "Mohanpura",
+            projectName: record.projectName || "Central Zone",
             latitude: record.lat,
             longitude: record.lng,
             control: record.control
@@ -1818,7 +1861,7 @@
             popupAnchor: [0, -28]
           })
         }).addTo(detailLayer);
-        marker.bindPopup(`<strong>${record.name}</strong><br>${record.projectName || "Mohanpura"} | ${record.type}<br>${record.id}`);
+        marker.bindPopup(`<strong>${record.name}</strong><br>${record.projectName || "Central Zone"} | ${record.type}<br>${record.id}`);
         marker.on("click", () => {
           selectedId = record.id;
           renderDetail();
@@ -1873,7 +1916,7 @@
           <span class="asset-icon" style="background:${colors[record.type] || "#123a43"}">${icons[record.type] || "AS"}</span>
           <span>
             <h3>${record.name}</h3>
-            <p>${record.type} | ${record.chainage || "chainage pending"} | ${record.span || "dimension pending"}</p>
+            <p>${record.type} | ${record.chainage || "street pending"} | ${record.span || "dimension pending"}</p>
             ${syncBadge(record)}
           </span>
           <span class="score ${scoreClass(record)}">${recordScore(record)}</span>
@@ -1894,8 +1937,8 @@
     }
 
     function renderControlScreen() {
-      const projectName = el("controlProjectName").value || "Mohanpura";
-      const selected = records.find((record) => record.id === selectedId && record.type === "Control" && (record.projectName || "Mohanpura") === projectName);
+      const projectName = el("controlProjectName").value || "Central Zone";
+      const selected = records.find((record) => record.id === selectedId && record.type === "Control" && (record.projectName || "Central Zone") === projectName);
       if (selected) {
         loadControlRecord(selected.id);
       } else if (!controlForm.elements.controlId.value) {
@@ -1904,7 +1947,7 @@
       renderControlList();
     }
 
-    function clearControlForm(projectName = el("controlProjectName").value || "Mohanpura") {
+    function clearControlForm(projectName = el("controlProjectName").value || "Central Zone") {
       controlForm.reset();
       controlForm.elements.controlProjectName.value = projectName;
       controlForm.elements.controlType.value = "DGPS BM";
@@ -1919,7 +1962,7 @@
     function loadControlRecord(recordId) {
       const record = records.find((item) => item.id === recordId && item.type === "Control");
       const control = record?.control || {};
-      controlForm.elements.controlProjectName.value = record?.projectName || control.projectName || "Mohanpura";
+      controlForm.elements.controlProjectName.value = record?.projectName || control.projectName || "Central Zone";
       controlForm.elements.controlType.value = control.type || "None";
       controlForm.elements.controlId.value = control.id || "";
       controlForm.elements.controlName.value = control.name || "";
@@ -1942,15 +1985,15 @@
     }
 
     function renderControlList() {
-      const projectName = el("controlProjectName").value || "Mohanpura";
-      const controls = records.filter((record) => record.type === "Control" && (record.projectName || "Mohanpura") === projectName && record.control && record.control.type && record.control.type !== "None");
+      const projectName = el("controlProjectName").value || "Central Zone";
+      const controls = records.filter((record) => record.type === "Control" && (record.projectName || "Central Zone") === projectName && record.control && record.control.type && record.control.type !== "None");
       el("controlListLabel").textContent = `${controls.length} control${controls.length === 1 ? "" : "s"}`;
       el("controlList").innerHTML = controls.length ? controls.map((record) => `
         <button class="record-card" type="button" data-control-open="${record.id}">
           <span class="asset-icon" style="background:${colors.Control}">${icons.Control}</span>
           <span>
             <h3>${record.control.name || record.control.id || record.id}</h3>
-            <p>${record.projectName || "Mohanpura"} | ${record.control.type} | ${record.control.elevation || "RL pending"}</p>
+            <p>${record.projectName || "Central Zone"} | ${record.control.type} | ${record.control.elevation || "RL pending"}</p>
             ${syncBadge(record)}
           </span>
           <span class="score good">CP</span>
@@ -1982,19 +2025,23 @@
           <span class="asset-icon" style="background:${colors[record.type] || "#123a43"}">${icons[record.type] || "AS"}</span>
           <div>
             <h3 style="margin:0 0 4px;font-size:16px;">${record.name}</h3>
-            <div class="muted">${record.projectName || "Mohanpura"} | ${record.type} | ${record.id}</div>
+            <div class="muted">${record.projectName || "Central Zone"} | ${record.type} | ${record.id}</div>
           </div>
           <span class="score ${scoreClass(record)}" style="margin-left:auto;">${recordScore(record)}</span>
         </div>
         <div class="detail-grid">
           <div class="detail-item"><b>Location</b><span>${record.lat}, ${record.lng}</span></div>
-          <div class="detail-item"><b>Project</b><span>${record.projectName || "Mohanpura"}</span></div>
+          <div class="detail-item"><b>Survey zone</b><span>${record.projectName || "Central Zone"}</span></div>
           <div class="detail-item"><b>Online report</b><span>${record.syncStatus === "online" ? `Posted ${record.syncedAt ? new Date(record.syncedAt).toLocaleString() : ""}` : record.syncStatus === "failed" ? `Retry needed: ${record.lastSyncError || "post failed"}` : "Pending post"}</span></div>
-          <div class="detail-item"><b>Chainage</b><span>${record.chainage || "Pending"}</span></div>
-          <div class="detail-item"><b>Length / span</b><span>${record.span || "Pending"}</span></div>
+          <div class="detail-item"><b>Ward / street</b><span>${record.chainage || "Pending"}</span></div>
+          <div class="detail-item"><b>Size / affected length</b><span>${record.span || "Pending"}</span></div>
+          <div class="detail-item"><b>Flow obstruction</b><span>${record.blockage || "Not recorded"}</span></div>
+          <div class="detail-item"><b>Inspector</b><span>${record.inspector || "Not recorded"}</span></div>
+          <div class="detail-item"><b>Inspection date</b><span>${record.inspectionDate || "Not recorded"}</span></div>
           <div class="detail-item"><b>Photographs</b><span>${record.media?.length || 0}/3 attached</span></div>
         </div>
         <div class="detail-item" style="margin-top:10px;"><b>Observed issue</b><span>${record.issue || "No issue recorded."}</span></div>
+        <div class="detail-item" style="margin-top:10px;"><b>Pre-monsoon action</b><span>${record.action || "No action recorded."}</span></div>
         <div class="form-subhead">
           <h3>Control Provision</h3>
           <span>${control.type || "None"}</span>
@@ -2061,7 +2108,8 @@
 
     function resetForm() {
       form.reset();
-      el("projectName").value = "Mohanpura";
+      el("projectName").value = "Central Zone";
+      el("inspectionDate").value = new Date().toISOString().slice(0, 10);
       el("assetId").value = nextId();
       el("lat").value = "21.1498";
       el("lng").value = "79.0806";
@@ -2196,7 +2244,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "asset-mapping-survey-packet.json";
+      link.download = "pre-monsoon-urban-inspection.json";
       link.click();
       URL.revokeObjectURL(url);
       showToast("Survey packet downloaded");
@@ -2284,7 +2332,7 @@
         switchScreen("control");
         return;
       }
-      const projectName = data.controlProjectName || "Mohanpura";
+      const projectName = data.controlProjectName || "Central Zone";
       const existingRecord = records.find((item) => item.id === selectedId && item.type === "Control");
       const control = {
         projectName,
@@ -2379,15 +2427,19 @@
       const existingRecord = records.find((item) => item.id === (data.assetId || ""));
       const record = {
         id: data.assetId || nextId(),
-        projectName: data.projectName || existingRecord?.projectName || "Mohanpura",
+        projectName: data.projectName || existingRecord?.projectName || "Central Zone",
         type: data.assetType,
         name: data.name,
         lat: data.lat,
         lng: data.lng,
         chainage: data.chainage,
         span: data.span,
+        blockage: data.blockage || "None",
+        inspector: data.inspector || "",
+        inspectionDate: data.inspectionDate || new Date().toISOString().slice(0, 10),
         condition: data.condition || "Good",
         issue: data.issue,
+        action: data.action || "",
         control: existingRecord?.control || { type: "None", id: "", name: "", surveyorName: "", northing: "", easting: "", ellipsoidalHeight: "", elevation: "", verticalDatum: "", dgpsAccuracy: "", observationTime: "", droneFlightId: "", droneAltitude: "", description: "" },
         media: mediaDraft.slice(0, 3),
         createdAt: new Date().toISOString(),
@@ -2428,7 +2480,7 @@
       }
       Object.entries({
         assetType: record.type,
-        projectName: record.projectName || "Mohanpura",
+        projectName: record.projectName || "Central Zone",
         assetId: record.id,
         name: record.name,
         lat: record.lat,

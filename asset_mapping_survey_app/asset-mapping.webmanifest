@@ -1,7 +1,7 @@
 {
-  "name": "Asset Mapping Survey",
-  "short_name": "Asset Map",
-  "description": "Mobile field app for mapping dam, river, canal and road assets.",
+  "name": "MonsoonReady Urban Inspection",
+  "short_name": "MonsoonReady",
+  "description": "Offline-ready pre-monsoon inspection and geotagging for urban drainage and road assets.",
   "start_url": "./asset-mapping-mobile-app.html",
   "display": "standalone",
   "background_color": "#f6f4ee",
