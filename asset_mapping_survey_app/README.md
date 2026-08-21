@@ -1,10 +1,10 @@
-# Asset Mapping Survey App
+# MonsoonReady Urban Asset Inspection
 
-Mobile-first asset mapping and DGPS control point survey app for dam, road, river protection, canal, and ground control point inventories.
+Mobile-first, offline-ready geotagging app for pre-monsoon inspection of stormwater drains, sewer and roadside drains, culverts, potholes, catch basins, manholes, outfalls, and waterlogging hotspots. Inspectors can capture GPS coordinates, condition, flow obstruction, recommended action, and photographic evidence in the field.
 
 ## Contents
 
-- `asset-mapping-mobile-app.html` - Field survey app with GPS, camera capture, Leaflet maps, Supabase sync, and export.
+- `asset-mapping-mobile-app.html` - Field inspection app with GPS, photo evidence, Leaflet maps, urban asset filters, Supabase sync, and export.
 - `control-points-dashboard.html` - Control point dashboard with map, table, filters, and CSV export.
 - `streamlit_app.py` - Streamlit wrapper for hosting the survey app and dashboard.
 - `streamlit_dashboard.py` - Dashboard-only Streamlit entry point for publishing the control point dashboard directly.
@@ -14,10 +14,16 @@ Mobile-first asset mapping and DGPS control point survey app for dam, road, rive
 
 ## Local Web App
 
-Serve this folder with any static web server, then open:
+From the repository root, serve the project with any static web server:
+
+```bash
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/`. The root preview entry point redirects to:
 
 ```text
-asset-mapping-mobile-app.html
+asset_mapping_survey_app/asset-mapping-mobile-app.html
 ```
 
 ## Streamlit Hosting
