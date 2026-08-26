@@ -1,5 +1,6 @@
 [
   {
+    "project": "Kundaliya",
     "scenario": "Q25",
     "label": "Kundaliya Q25 flood inundation depth",
     "metric": "Maximum flood depth",
@@ -26,6 +27,7 @@
     "displayCrs": "EPSG:3857"
   },
   {
+    "project": "Kundaliya",
     "scenario": "Q50",
     "label": "Kundaliya Q50 flood inundation depth",
     "metric": "Maximum flood depth",
@@ -52,6 +54,7 @@
     "displayCrs": "EPSG:3857"
   },
   {
+    "project": "Kundaliya",
     "scenario": "Q100",
     "label": "Kundaliya Q100 flood inundation depth",
     "metric": "Maximum flood depth",
@@ -78,6 +81,7 @@
     "displayCrs": "EPSG:3857"
   },
   {
+    "project": "Kundaliya",
     "scenario": "PMF",
     "label": "Kundaliya PMF flood inundation depth",
     "metric": "Maximum flood depth",
@@ -94,6 +98,114 @@
     ],
     "opacity": 1.0,
     "maxDepthM": 17.44,
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1200,
+      1966
+    ],
+    "sourceCrs": "EPSG:32643",
+    "displayCrs": "EPSG:3857"
+  },
+  {
+    "project": "Mohanpura",
+    "scenario": "Q25",
+    "label": "Mohanpura Q25 flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/mohanpura_q25_depth_max.png",
+    "bounds": [
+      [
+        22.5525269,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 1.0,
+    "maxDepthM": 8.41,
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1200,
+      1966
+    ],
+    "sourceCrs": "EPSG:32643",
+    "displayCrs": "EPSG:3857"
+  },
+  {
+    "project": "Mohanpura",
+    "scenario": "Q50",
+    "label": "Mohanpura Q50 flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/mohanpura_q50_depth_max.png",
+    "bounds": [
+      [
+        22.5525269,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 1.0,
+    "maxDepthM": 9.11,
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1200,
+      1966
+    ],
+    "sourceCrs": "EPSG:32643",
+    "displayCrs": "EPSG:3857"
+  },
+  {
+    "project": "Mohanpura",
+    "scenario": "Q100",
+    "label": "Mohanpura Q100 flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/mohanpura_q100_depth_max.png",
+    "bounds": [
+      [
+        22.5525269,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 1.0,
+    "maxDepthM": 9.61,
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1200,
+      1966
+    ],
+    "sourceCrs": "EPSG:32643",
+    "displayCrs": "EPSG:3857"
+  },
+  {
+    "project": "Mohanpura",
+    "scenario": "PMF",
+    "label": "Mohanpura PMF flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/mohanpura_pmf_depth_max.png",
+    "bounds": [
+      [
+        22.5525269,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 1.0,
+    "maxDepthM": 16.05,
     "peakCms": null,
     "volumeMcm": null,
     "imageSize": [

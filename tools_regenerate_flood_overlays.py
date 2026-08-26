@@ -12,16 +12,26 @@ from pyproj import Transformer
 from PIL import Image
 
 ROOT = Path(r"D:\01 Project\Development\Mohan_Kundaliya\Data\dashboard_gis_streamlit")
-SOURCE_ROOT = Path(r"D:\01 Project\Development\Mohan_Kundaliya\Flood Inundation\MKP_Dam_Break\outputs\compact_flood_rasters\Kundaliya")
+SOURCE_ROOT = Path(r"D:\01 Project\Development\Mohan_Kundaliya\Flood Inundation\MKP_Dam_Break\outputs\compact_flood_rasters")
 OUT_DIR = ROOT / "static" / "flood_inundation"
 DASHBOARD = ROOT / "dashboard.html"
 MANIFEST = OUT_DIR / "flood_inundation_manifest.json"
 
+PROJECTS = [
+    ("Kundaliya", "kundaliya"),
+    ("Mohanpura", "mohanpura"),
+]
+SCENARIO_NAMES = ["Q25", "Q50", "Q100", "PMF"]
 SCENARIOS = [
-    ("Q25", SOURCE_ROOT / "Q25" / "KUNDALIYA_Q25_DEPTH_MAX.tif", 1.0),
-    ("Q50", SOURCE_ROOT / "Q50" / "KUNDALIYA_Q50_DEPTH_MAX.tif", 1.0),
-    ("Q100", SOURCE_ROOT / "Q100" / "KUNDALIYA_Q100_DEPTH_MAX.tif", 1.0),
-    ("PMF", SOURCE_ROOT / "PMF" / "KUNDALIYA_PMF_DEPTH_MAX.tif", 1.0),
+    (
+        project,
+        slug,
+        scenario,
+        SOURCE_ROOT / project / scenario / f"{project.upper()}_{scenario}_DEPTH_MAX.tif",
+        1.0,
+    )
+    for project, slug in PROJECTS
+    for scenario in SCENARIO_NAMES
 ]
 
 WIDTH = 1200
@@ -72,7 +82,7 @@ def colorize_depth(data, valid):
     rgba[..., 3] = np.where(valid, 255, 0).astype(np.uint8)
     return rgba
 
-def make_overlay(scenario, tif_path, opacity):
+def make_overlay(project, project_slug, scenario, tif_path, opacity):
     with rasterio.open(tif_path) as src:
         west, south, east, north = transformed_bounds(src, DISPLAY_CRS)
         height = max(1, round(WIDTH * ((north - south) / (east - west))))
@@ -92,12 +102,13 @@ def make_overlay(scenario, tif_path, opacity):
         valid = np.isfinite(dest) & (dest > 0.01)
         max_depth = float(np.nanmax(np.where(valid, dest, np.nan))) if np.any(valid) else 0.0
         rgba = colorize_depth(dest, valid)
-        out_name = f"kundaliya_{scenario.lower()}_depth_max.png"
+        out_name = f"{project_slug}_{scenario.lower()}_depth_max.png"
         out_path = OUT_DIR / out_name
         Image.fromarray(rgba, "RGBA").save(out_path, optimize=True)
         return {
+            "project": project,
             "scenario": scenario,
-            "label": f"Kundaliya {scenario} flood inundation depth",
+            "label": f"{project} {scenario} flood inundation depth",
             "metric": "Maximum flood depth",
             "url": f"/app/static/flood_inundation/{out_name}",
             "bounds": leaflet_bounds_from_mercator(west, south, east, north),
@@ -129,4 +140,4 @@ manifest = [make_overlay(*item) for item in SCENARIOS]
 MANIFEST.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 embed_manifest(manifest)
 for item in manifest:
-    print(item["scenario"], item["bounds"], item["imageSize"], item["maxDepthM"], item["sourceCrs"], "->", item["displayCrs"])
+    print(item["project"], item["scenario"], item["bounds"], item["imageSize"], item["maxDepthM"], item["sourceCrs"], "->", item["displayCrs"])
