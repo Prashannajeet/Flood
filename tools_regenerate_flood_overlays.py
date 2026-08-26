@@ -56,10 +56,10 @@ def colorize_depth(data, valid, max_depth):
     normalized = np.zeros_like(data, dtype=np.float32)
     normalized[valid] = np.clip(data[valid] / max(max_depth, 0.001), 0, 1)
     stops = np.array([
-        [214, 240, 255],
-        [107, 185, 226],
-        [35, 113, 186],
-        [12, 48, 112],
+        [171, 210, 250],
+        [118, 146, 255],
+        [27, 44, 193],
+        [9, 21, 64],
     ], dtype=float)
     scaled = normalized * (len(stops) - 1)
     low = np.floor(scaled).astype(int)
