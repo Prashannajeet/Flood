@@ -332,7 +332,7 @@ const baseMaps = {
   'Hybrid satellite': hybrid
 };
 const overlayMaps = {};
-const allLayerGroup = L.featureGroup().addTo(map);
+const allLayerGroup = L.featureGroup();
 const gisLayerObjects = new Map();
 function layerFeatureStyle(feature, layer) {
   if (layer.id === 'drainage') {
@@ -367,11 +367,11 @@ payload.gisLayers.forEach(layer => {
   });
   overlayMaps[layer.name] = gj;
   gisLayerObjects.set(layer.id, gj);
-  if (layer.default) gj.addTo(map);
+  if (layer.id === 'catchment') gj.addTo(map);
   allLayerGroup.addLayer(gj);
 });
 
-const stationLayer = L.layerGroup().addTo(map);
+const stationLayer = L.layerGroup();
 overlayMaps['Gauge stations'] = stationLayer;
 const markers = new Map();
 const bounds = [];
@@ -381,7 +381,7 @@ payload.stations.forEach(s => {
   m.on('click', () => { stationSelect.value = s.name; update(); });
   markers.set(s.name, m); bounds.push([s.lat, s.lon]);
 });
-const rainfallLayer = L.layerGroup().addTo(map);
+const rainfallLayer = L.layerGroup();
 overlayMaps['Rainfall stations'] = rainfallLayer;
 const rainfallMarkers = new Map();
 (payload.rainfallStations || []).forEach(s => {
@@ -433,7 +433,6 @@ floodInundationLayers.forEach(layer => {
   const image = L.imageOverlay(layer.url, layer.bounds, { opacity: layer.opacity || 0.65, interactive:false, className:'flood-overlay-image' });
   overlayMaps[`Flood inundation - ${layer.label}`] = image;
   floodOverlayObjects.push({ image, layer });
-  if (layer.scenario === 'Q100') image.addTo(map);
 });
 const swipeLine = L.DomUtil.create('div', 'swipe-line', map.getContainer());
 let floodOpacityControl = null;
@@ -488,9 +487,9 @@ floodLegend.addTo(map);
 L.control.layers(baseMaps, overlayMaps, { collapsed:true, sortLayers:true }).addTo(map);
 L.control.scale({ imperial:false, metric:true, position:'bottomleft' }).addTo(map);
 const fitGroup = L.featureGroup([...Array.from(markers.values()), ...payload.gisLayers.filter(l => l.default).map(l => gisLayerObjects.get(l.id)).filter(Boolean)]);
-const defaultAoiLayer = gisLayerObjects.get('mohanpuraAoi');
-if (defaultAoiLayer && defaultAoiLayer.getBounds().isValid()) {
-  map.fitBounds(defaultAoiLayer.getBounds(), { padding:[42,42], maxZoom:12 });
+const defaultCatchmentLayer = gisLayerObjects.get('catchment');
+if (defaultCatchmentLayer && defaultCatchmentLayer.getBounds().isValid()) {
+  map.fitBounds(defaultCatchmentLayer.getBounds(), { padding:[24,24] });
 } else if (fitGroup.getLayers().length) {
   map.fitBounds(fitGroup.getBounds(), { padding:[22,22] });
 } else if (bounds.length) {
