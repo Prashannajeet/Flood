@@ -1,0 +1,189 @@
+{
+  "mapDisplayCrs": "EPSG:3857 Web Mercator for Mapbox/Google/Esri basemaps",
+  "engineeringReferenceCrs": "EPSG:32643 WGS 84 / UTM zone 43N",
+  "note": "Web tile basemaps cannot be natively displayed in UTM 43N in standard Leaflet. Source engineering layers are reprojected to WGS84/Web Mercator display for browser alignment.",
+  "layers": [
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\AOI Survey\\AOI Kundaliya Final.shp",
+      "layer": "AOI Kundaliya Final",
+      "sourceCrs": "EPSG:32643",
+      "sourceBounds": [
+        618180.0,
+        2641680.0,
+        635010.0,
+        2678695.4801815925
+      ],
+      "featureCount": 1,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\AOI Survey\\AOI Kundaliya.shp",
+      "layer": "AOI Kundaliya",
+      "sourceCrs": "EPSG:32643",
+      "sourceBounds": [
+        623670.0,
+        2646448.3431811635,
+        635010.0,
+        2664312.8764107497
+      ],
+      "featureCount": 1,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\AOI Survey\\AOI_Mohanpura_Final.shp",
+      "layer": "AOI_Mohanpura_Final",
+      "sourceCrs": "EPSG:32643",
+      "sourceBounds": [
+        668130.0,
+        2650080.0,
+        680850.6667244782,
+        2676481.877023848
+      ],
+      "featureCount": 1,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\AOI Survey\\Kundaliya.shp",
+      "layer": "Kundaliya",
+      "sourceCrs": "EPSG:32643",
+      "sourceBounds": [
+        618180.0,
+        2641680.0,
+        635010.0,
+        2678695.4801815925
+      ],
+      "featureCount": 2,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\AOI Survey\\Mohanpura.shp",
+      "layer": "Mohanpura",
+      "sourceCrs": "EPSG:32643",
+      "sourceBounds": [
+        622500.0,
+        2645700.0,
+        683430.0,
+        2775510.0
+      ],
+      "featureCount": 4,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\AOI_Cntr.shp",
+      "layer": "AOI_Cntr",
+      "sourceCrs": "EPSG:32643",
+      "sourceBounds": [
+        605354.2401589766,
+        2640776.750866537,
+        683408.8193556349,
+        2690807.192957209
+      ],
+      "featureCount": 4,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Buildings_Mohanpura_FP.shp",
+      "layer": "Buildings_Mohanpura_FP",
+      "sourceCrs": "EPSG:4326",
+      "sourceBounds": [
+        76.6563015753492,
+        23.9553902020539,
+        76.7772398503453,
+        24.1910930763901
+      ],
+      "featureCount": 3787,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Catchment.shp",
+      "layer": "Catchment",
+      "sourceCrs": "EPSG:4326",
+      "sourceBounds": [
+        75.15416666666687,
+        22.58750000000026,
+        77.42500000000047,
+        26.041666666666856
+      ],
+      "featureCount": 1,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Catchment_Minor.shp",
+      "layer": "Catchment_Minor",
+      "sourceCrs": "EPSG:4326",
+      "sourceBounds": [
+        74.85776604546444,
+        22.587500000000023,
+        77.42500000000004,
+        26.041666666666703
+      ],
+      "featureCount": 22,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Catchment_Subminor.shp",
+      "layer": "Catchment_Subminor",
+      "sourceCrs": "EPSG:4326",
+      "sourceBounds": [
+        74.85776604546444,
+        22.587500000000023,
+        77.42500000000004,
+        26.041666666666703
+      ],
+      "featureCount": 216,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Cntr_Boundary.shp",
+      "layer": "Cntr_Boundary",
+      "sourceCrs": "EPSG:32643",
+      "sourceBounds": [
+        605354.2401589766,
+        2640776.750866537,
+        683408.8193556349,
+        2690807.192957209
+      ],
+      "featureCount": 4,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Drainage.shp",
+      "layer": "Drainage",
+      "sourceCrs": "EPSG:4326",
+      "sourceBounds": [
+        74.7999999999997,
+        22.481249999999655,
+        79.30624999999966,
+        26.914583333332903
+      ],
+      "featureCount": 4414,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Main Stream.shp",
+      "layer": "Main Stream",
+      "sourceCrs": "EPSG:4326",
+      "sourceBounds": [
+        76.161349,
+        22.6962246,
+        76.9760692,
+        25.5351348
+      ],
+      "featureCount": 13,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    },
+    {
+      "file": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Shape Files\\Village_Boundary.shp",
+      "layer": "Village_Boundary",
+      "sourceCrs": "EPSG:32644",
+      "sourceBounds": [
+        3399.9820154749905,
+        2646349.695654804,
+        71812.88221394224,
+        2692339.1806447115
+      ],
+      "featureCount": 120,
+      "dashboardDisplay": "GeoJSON EPSG:4326 -> Leaflet EPSG:3857"
+    }
+  ]
+}

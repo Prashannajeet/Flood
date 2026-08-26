@@ -25,22 +25,29 @@ SCENARIOS = [
 ]
 
 WIDTH = 1200
-DST_CRS = "+proj=longlat +datum=WGS84 +no_defs"
+DISPLAY_CRS = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs"
+LEAFLET_CRS = "+proj=longlat +datum=WGS84 +no_defs"
 
-def transformed_bounds(src):
-    transformer = Transformer.from_crs("+proj=utm +zone=43 +datum=WGS84 +units=m +no_defs", DST_CRS, always_xy=True)
+def transformed_bounds(src, dst_crs):
+    transformer = Transformer.from_crs("+proj=utm +zone=43 +datum=WGS84 +units=m +no_defs", dst_crs, always_xy=True)
     left, bottom, right, top = src.bounds
     xs = []
     ys = []
     for x in np.linspace(left, right, 13):
         for y in (bottom, top):
-            lon, lat = transformer.transform(float(x), float(y))
-            xs.append(lon); ys.append(lat)
+            xx, yy = transformer.transform(float(x), float(y))
+            xs.append(xx); ys.append(yy)
     for y in np.linspace(bottom, top, 13):
         for x in (left, right):
-            lon, lat = transformer.transform(float(x), float(y))
-            xs.append(lon); ys.append(lat)
+            xx, yy = transformer.transform(float(x), float(y))
+            xs.append(xx); ys.append(yy)
     return min(xs), min(ys), max(xs), max(ys)
+
+def leaflet_bounds_from_mercator(west, south, east, north):
+    transformer = Transformer.from_crs(DISPLAY_CRS, LEAFLET_CRS, always_xy=True)
+    west_lon, south_lat = transformer.transform(west, south)
+    east_lon, north_lat = transformer.transform(east, north)
+    return [[round(south_lat, 8), round(west_lon, 8)], [round(north_lat, 8), round(east_lon, 8)]]
 
 def colorize_depth(data, valid, max_depth):
     rgba = np.zeros((data.shape[0], data.shape[1], 4), dtype=np.uint8)
@@ -66,7 +73,7 @@ def colorize_depth(data, valid, max_depth):
 
 def make_overlay(scenario, tif_path, opacity):
     with rasterio.open(tif_path) as src:
-        west, south, east, north = transformed_bounds(src)
+        west, south, east, north = transformed_bounds(src, DISPLAY_CRS)
         height = max(1, round(WIDTH * ((north - south) / (east - west))))
         dst_transform = from_bounds(west, south, east, north, WIDTH, height)
         dest = np.full((height, WIDTH), np.nan, dtype=np.float32)
@@ -77,7 +84,7 @@ def make_overlay(scenario, tif_path, opacity):
             src_crs=src.crs,
             src_nodata=src.nodata,
             dst_transform=dst_transform,
-            dst_crs=DST_CRS,
+            dst_crs=DISPLAY_CRS,
             dst_nodata=np.nan,
             resampling=Resampling.bilinear,
         )
@@ -92,14 +99,14 @@ def make_overlay(scenario, tif_path, opacity):
             "label": f"Kundaliya {scenario} flood inundation depth",
             "metric": "Maximum flood depth",
             "url": f"/app/static/flood_inundation/{out_name}",
-            "bounds": [[round(south, 8), round(west, 8)], [round(north, 8), round(east, 8)]],
+            "bounds": leaflet_bounds_from_mercator(west, south, east, north),
             "opacity": opacity,
             "maxDepthM": round(max_depth, 2),
             "peakCms": None,
             "volumeMcm": None,
             "imageSize": [WIDTH, height],
             "sourceCrs": "EPSG:32643",
-            "displayCrs": "EPSG:4326",
+            "displayCrs": "EPSG:3857",
         }
 
 def embed_manifest(manifest):

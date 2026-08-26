@@ -15,15 +15,15 @@
       ]
     ],
     "opacity": 0.68,
-    "maxDepthM": 8.13,
+    "maxDepthM": 8.53,
     "peakCms": null,
     "volumeMcm": null,
     "imageSize": [
       1200,
-      1792
+      1966
     ],
     "sourceCrs": "EPSG:32643",
-    "displayCrs": "EPSG:4326"
+    "displayCrs": "EPSG:3857"
   },
   {
     "scenario": "Q50",
@@ -41,15 +41,15 @@
       ]
     ],
     "opacity": 0.68,
-    "maxDepthM": 8.44,
+    "maxDepthM": 8.62,
     "peakCms": null,
     "volumeMcm": null,
     "imageSize": [
       1200,
-      1792
+      1966
     ],
     "sourceCrs": "EPSG:32643",
-    "displayCrs": "EPSG:4326"
+    "displayCrs": "EPSG:3857"
   },
   {
     "scenario": "Q100",
@@ -67,15 +67,15 @@
       ]
     ],
     "opacity": 0.68,
-    "maxDepthM": 9.04,
+    "maxDepthM": 9.2,
     "peakCms": null,
     "volumeMcm": null,
     "imageSize": [
       1200,
-      1792
+      1966
     ],
     "sourceCrs": "EPSG:32643",
-    "displayCrs": "EPSG:4326"
+    "displayCrs": "EPSG:3857"
   },
   {
     "scenario": "PMF",
@@ -93,14 +93,14 @@
       ]
     ],
     "opacity": 0.62,
-    "maxDepthM": 17.16,
+    "maxDepthM": 17.44,
     "peakCms": null,
     "volumeMcm": null,
     "imageSize": [
       1200,
-      1792
+      1966
     ],
     "sourceCrs": "EPSG:32643",
-    "displayCrs": "EPSG:4326"
+    "displayCrs": "EPSG:3857"
   }
 ]
