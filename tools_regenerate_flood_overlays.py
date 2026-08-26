@@ -18,15 +18,22 @@ DASHBOARD = ROOT / "dashboard.html"
 MANIFEST = OUT_DIR / "flood_inundation_manifest.json"
 
 SCENARIOS = [
-    ("Q25", SOURCE_ROOT / "Q25" / "KUNDALIYA_Q25_DEPTH_MAX.tif", 0.68),
-    ("Q50", SOURCE_ROOT / "Q50" / "KUNDALIYA_Q50_DEPTH_MAX.tif", 0.68),
-    ("Q100", SOURCE_ROOT / "Q100" / "KUNDALIYA_Q100_DEPTH_MAX.tif", 0.68),
-    ("PMF", SOURCE_ROOT / "PMF" / "KUNDALIYA_PMF_DEPTH_MAX.tif", 0.62),
+    ("Q25", SOURCE_ROOT / "Q25" / "KUNDALIYA_Q25_DEPTH_MAX.tif", 1.0),
+    ("Q50", SOURCE_ROOT / "Q50" / "KUNDALIYA_Q50_DEPTH_MAX.tif", 1.0),
+    ("Q100", SOURCE_ROOT / "Q100" / "KUNDALIYA_Q100_DEPTH_MAX.tif", 1.0),
+    ("PMF", SOURCE_ROOT / "PMF" / "KUNDALIYA_PMF_DEPTH_MAX.tif", 1.0),
 ]
 
 WIDTH = 1200
 DISPLAY_CRS = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs"
 LEAFLET_CRS = "+proj=longlat +datum=WGS84 +no_defs"
+LEGEND_MAX_DEPTH_M = 10.0
+FLOOD_DEPTH_PALETTE = np.array([
+    [171, 210, 250],  # #ABD2FA
+    [118, 146, 255],  # #7692FF
+    [27, 44, 193],    # #1B2CC1
+    [9, 21, 64],      # #091540
+], dtype=float)
 
 def transformed_bounds(src, dst_crs):
     transformer = Transformer.from_crs("+proj=utm +zone=43 +datum=WGS84 +units=m +no_defs", dst_crs, always_xy=True)
@@ -49,26 +56,20 @@ def leaflet_bounds_from_mercator(west, south, east, north):
     east_lon, north_lat = transformer.transform(east, north)
     return [[round(south_lat, 8), round(west_lon, 8)], [round(north_lat, 8), round(east_lon, 8)]]
 
-def colorize_depth(data, valid, max_depth):
+def colorize_depth(data, valid):
     rgba = np.zeros((data.shape[0], data.shape[1], 4), dtype=np.uint8)
     if not np.any(valid):
         return rgba
     normalized = np.zeros_like(data, dtype=np.float32)
-    normalized[valid] = np.clip(data[valid] / max(max_depth, 0.001), 0, 1)
-    stops = np.array([
-        [171, 210, 250],
-        [118, 146, 255],
-        [27, 44, 193],
-        [9, 21, 64],
-    ], dtype=float)
+    normalized[valid] = np.clip(data[valid] / LEGEND_MAX_DEPTH_M, 0, 1)
+    stops = FLOOD_DEPTH_PALETTE
     scaled = normalized * (len(stops) - 1)
     low = np.floor(scaled).astype(int)
     high = np.clip(low + 1, 0, len(stops) - 1)
     frac = (scaled - low)[..., None]
     rgb = stops[low] * (1 - frac) + stops[high] * frac
     rgba[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
-    alpha = np.where(normalized > 0, 72 + normalized * 178, 0)
-    rgba[..., 3] = np.where(valid, np.clip(alpha, 0, 230), 0).astype(np.uint8)
+    rgba[..., 3] = np.where(valid, 255, 0).astype(np.uint8)
     return rgba
 
 def make_overlay(scenario, tif_path, opacity):
@@ -90,7 +91,7 @@ def make_overlay(scenario, tif_path, opacity):
         )
         valid = np.isfinite(dest) & (dest > 0.01)
         max_depth = float(np.nanmax(np.where(valid, dest, np.nan))) if np.any(valid) else 0.0
-        rgba = colorize_depth(dest, valid, max_depth)
+        rgba = colorize_depth(dest, valid)
         out_name = f"kundaliya_{scenario.lower()}_depth_max.png"
         out_path = OUT_DIR / out_name
         Image.fromarray(rgba, "RGBA").save(out_path, optimize=True)
