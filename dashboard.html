@@ -144,9 +144,10 @@ body.report-v1 .panel-head { padding:6px 9px; background:#fbfeff; }
 body.report-v1 .panel-title { font-size:14px; color:#12313f; }
 body.report-v1 .panel-meta { font-size:10px; color:#6a8792; }
 body.report-v1 .layer-note, body.report-v1 .drainage-legend { padding:4px 9px; font-size:10px; gap:5px; background:#f8fcff; color:#6a8792; }
-body.report-v1 .side-stack { height:100%; min-height:0; display:grid; grid-template-rows:minmax(210px,.98fr) minmax(182px,.78fr) minmax(246px,.88fr); gap:7px; overflow:hidden; }
+body.report-v1 .side-stack { height:100%; min-height:0; display:grid; grid-template-rows:minmax(212px,.98fr) minmax(168px,.7fr) minmax(254px,.92fr); gap:7px; overflow:hidden; }
 body.report-v1 .compact-secondary, body.report-v1 .model-input-section, body.report-v1 .limit-section, body.report-v1 .scenario-section { display:none; }
 body.report-v1 .flood-report-panel, body.report-v1 .chart-panel { min-height:0; overflow:hidden; }
+body.report-v1 .rainfall-panel { display:grid; grid-template-rows:auto minmax(0,1fr); }
 body.report-v1 .report-section { padding:5px 8px; }
 body.report-v1 .report-note { font-size:11px; line-height:1.22; margin-bottom:4px; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; color:#284855; }
 body.report-v1 .section-label { font-size:10px; margin-bottom:4px; color:#5b7580; }
@@ -158,8 +159,8 @@ body.report-v1 .tablewrap { max-height:105px; overflow:hidden; }
 body.report-v1 th, body.report-v1 td { padding:3px 5px; font-size:10px; border-color:#e5f2f6; }
 body.report-v1 th { font-size:9px; color:#63808b; }
 body.report-v1 .data-note { padding:4px 8px 5px; font-size:9px; color:#6a8792; }
-body.report-v1 .chart { min-height:0; height:auto; padding:2px 7px 0; }
-body.report-v1 #rainfallChart { height:174px; }
+body.report-v1 .chart { min-height:0; height:auto; padding:2px 7px 0; overflow:hidden; }
+body.report-v1 #rainfallChart { height:100%; }
 body.report-v1 #levelChart { height:121px; }
 body.report-v1 #qChart { height:135px; }
 body.report-v1 .chart + .chart { border-top:1px solid #e5f2f6; }
@@ -781,8 +782,9 @@ function drawRainfallBars(containerId, rows, title) {
   el.innerHTML = '';
   const compact = document.body.classList.contains('report-v1');
   const width = Math.max(360, el.clientWidth || 600);
-  const height = compact ? 166 : 310;
-  const margin = compact ? {top:38,right:18,bottom:34,left:46} : {top:48,right:24,bottom:50,left:58};
+  const availableHeight = el.clientHeight || (compact ? 118 : 310);
+  const height = compact ? Math.max(104, Math.min(availableHeight - 2, 128)) : Math.max(260, availableHeight || 310);
+  const margin = compact ? {top:30,right:12,bottom:24,left:42} : {top:46,right:22,bottom:46,left:56};
   const innerW = width - margin.left - margin.right;
   const innerH = height - margin.top - margin.bottom;
   rows = rows.map(d => ({...d, x:parseMonth(d.month), rain:Number(d.rainfall_mm || 0)}));
@@ -791,8 +793,8 @@ function drawRainfallBars(containerId, rows, title) {
   const gradient = defs.append('linearGradient').attr('id', `${containerId}-rainGradient`).attr('x1','0%').attr('y1','0%').attr('x2','0%').attr('y2','100%');
   gradient.append('stop').attr('offset','0%').attr('stop-color','#2f80b7');
   gradient.append('stop').attr('offset','100%').attr('stop-color','#95ccdd');
-  const chartTitle = compact && title.length > 42 ? `${title.slice(0, 39)}...` : title;
-  svg.append('text').attr('x', 8).attr('y', 14).attr('font-size', compact ? 11 : 14).attr('font-weight', 800).attr('fill','#12313f').text(chartTitle);
+  const chartTitle = compact && title.length > 34 ? `${title.slice(0, 31)}...` : title;
+  svg.append('text').attr('x', 6).attr('y', 12).attr('font-size', compact ? 10 : 14).attr('font-weight', 800).attr('fill','#12313f').text(chartTitle);
   if (!rows.length) {
     svg.append('rect').attr('x', margin.left).attr('y', margin.top).attr('width', innerW).attr('height', innerH).attr('rx', 4).attr('fill','#f8fcff').attr('stroke','#e5f2f6');
     svg.append('text').attr('x', width/2).attr('y', height/2).attr('text-anchor','middle').attr('fill','var(--muted)').text('No rainfall data');
@@ -801,17 +803,17 @@ function drawRainfallBars(containerId, rows, title) {
   const peak = rows.reduce((a,b) => b.rain > a.rain ? b : a, rows[0]);
   const total = d3.sum(rows, d => d.rain);
   const yearSpan = `${rows[0].month.slice(0,4)}-${rows[rows.length - 1].month.slice(0,4)}`;
-  svg.append('text').attr('x', 8).attr('y', 29).attr('font-size', compact ? 9 : 11).attr('fill','#5b7580').text(`${yearSpan} | ${rows.length.toLocaleString()} months`);
-  svg.append('text').attr('x', width - 8).attr('y', 29).attr('text-anchor','end').attr('font-size', compact ? 9 : 11).attr('fill','#5b7580').text(`Total ${total.toLocaleString(undefined,{maximumFractionDigits:0})} mm`);
+  const metaText = `${yearSpan} | ${rows.length.toLocaleString()} months | total ${total.toLocaleString(undefined,{maximumFractionDigits:0})} mm`;
+  svg.append('text').attr('x', 6).attr('y', 24).attr('font-size', compact ? 8.5 : 11).attr('fill','#5b7580').text(metaText);
   const x = d3.scaleTime().domain(d3.extent(rows, d => d.x)).range([0, innerW]);
   const y = d3.scaleLinear().domain([0, d3.max(rows, d => d.rain) || 1]).nice(compact ? 4 : 6).range([innerH,0]);
   const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
   g.append('rect').attr('width', innerW).attr('height', innerH).attr('rx', 4).attr('fill','#f8fcff').attr('stroke','#d7edf3');
   g.append('g').attr('class','gridline').call(d3.axisLeft(y).ticks(compact ? 4 : 6).tickSize(-innerW).tickFormat('')).select('.domain').remove();
-  const xAxis = g.append('g').attr('class','axis').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(x).ticks(compact ? 4 : 7).tickFormat(d3.timeFormat('%Y')));
-  xAxis.selectAll('text').attr('dy','1.1em');
-  g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(compact ? 4 : 6).tickFormat(d => d >= 1000 ? `${d / 1000}k` : d));
-  svg.append('text').attr('x', margin.left).attr('y', margin.top - 8).attr('font-size', compact ? 9 : 11).attr('fill','#496773').attr('font-weight',700).text('Monthly rainfall (mm)');
+  const xAxis = g.append('g').attr('class','axis').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(x).ticks(compact ? 3 : 7).tickFormat(d3.timeFormat('%Y')));
+  xAxis.selectAll('text').attr('dy','1em');
+  g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(compact ? 3 : 6).tickFormat(d => d >= 1000 ? `${d / 1000}k` : d));
+  svg.append('text').attr('x', margin.left).attr('y', margin.top - 5).attr('font-size', compact ? 8.5 : 11).attr('fill','#496773').attr('font-weight',700).text('Rainfall (mm)');
   const barW = Math.max(2, Math.min(12, innerW / rows.length * .78));
   g.selectAll('rect.rfbar').data(rows).join('rect')
     .attr('class','rfbar')
@@ -823,10 +825,10 @@ function drawRainfallBars(containerId, rows, title) {
     .attr('opacity',.88);
   const avg = d3.mean(rows, d => d.rain) || 0;
   g.append('line').attr('x1',0).attr('x2',innerW).attr('y1',y(avg)).attr('y2',y(avg)).attr('stroke','#dd8a4c').attr('stroke-width',1.4).attr('stroke-dasharray','4 4').attr('opacity',.9);
-  g.append('circle').attr('cx',x(peak.x)).attr('cy',y(peak.rain)).attr('r',compact ? 3.2 : 4.2).attr('fill','#dd8a4c').attr('stroke','#fff').attr('stroke-width',1.4);
-  const peakLabelX = x(peak.x) > innerW * .72 ? x(peak.x) - 6 : x(peak.x) + 6;
-  const peakAnchor = x(peak.x) > innerW * .72 ? 'end' : 'start';
-  g.append('text').attr('x',peakLabelX).attr('y',Math.max(10, y(peak.rain) - 6)).attr('text-anchor',peakAnchor).attr('font-size', compact ? 9 : 10).attr('font-weight',700).attr('fill','#7c3f10').text(`Peak ${peak.rain.toLocaleString(undefined,{maximumFractionDigits:0})} mm`);
+  g.append('circle').attr('cx',x(peak.x)).attr('cy',y(peak.rain)).attr('r',compact ? 2.8 : 4.2).attr('fill','#dd8a4c').attr('stroke','#fff').attr('stroke-width',1.2);
+  const peakLabelX = Math.max(4, Math.min(innerW - 4, x(peak.x) + (x(peak.x) > innerW * .68 ? -6 : 6)));
+  const peakAnchor = x(peak.x) > innerW * .68 ? 'end' : 'start';
+  g.append('text').attr('x',peakLabelX).attr('y',Math.max(9, y(peak.rain) - 5)).attr('text-anchor',peakAnchor).attr('font-size', compact ? 8.5 : 10).attr('font-weight',700).attr('fill','#7c3f10').text(`Peak ${peak.rain.toLocaleString(undefined,{maximumFractionDigits:0})}`);
 }
 function updateRainfall() {
   const code = rainfallSelect.value;
