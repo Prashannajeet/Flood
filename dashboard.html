@@ -790,8 +790,8 @@ function drawRainfallBars(containerId, rows, title) {
   const compact = document.body.classList.contains('report-v1');
   const width = Math.max(360, el.clientWidth || 600);
   const availableHeight = el.clientHeight || (compact ? 118 : 310);
-  const height = compact ? Math.max(104, Math.min(availableHeight - 2, 128)) : Math.max(260, availableHeight || 310);
-  const margin = compact ? {top:30,right:12,bottom:24,left:42} : {top:46,right:22,bottom:46,left:56};
+  const height = compact ? Math.max(124, Math.min(availableHeight - 2, 148)) : Math.max(280, availableHeight || 330);
+  const margin = compact ? {top:48,right:14,bottom:24,left:44} : {top:64,right:24,bottom:46,left:58};
   const innerW = width - margin.left - margin.right;
   const innerH = height - margin.top - margin.bottom;
   rows = rows.map(d => ({...d, x:parseMonth(d.month), rain:Number(d.rainfall_mm || 0)}));
@@ -800,8 +800,8 @@ function drawRainfallBars(containerId, rows, title) {
   const gradient = defs.append('linearGradient').attr('id', `${containerId}-rainGradient`).attr('x1','0%').attr('y1','0%').attr('x2','0%').attr('y2','100%');
   gradient.append('stop').attr('offset','0%').attr('stop-color','#2f80b7');
   gradient.append('stop').attr('offset','100%').attr('stop-color','#95ccdd');
-  const chartTitle = compact && title.length > 34 ? `${title.slice(0, 31)}...` : title;
-  svg.append('text').attr('x', 6).attr('y', 12).attr('font-size', compact ? 10 : 14).attr('font-weight', 800).attr('fill','#12313f').text(chartTitle);
+  const chartTitle = compact && title.length > 30 ? `${title.slice(0, 27)}...` : title;
+  svg.append('text').attr('x', 8).attr('y', compact ? 12 : 16).attr('font-size', compact ? 10 : 14).attr('font-weight', 800).attr('fill','#12313f').text(chartTitle);
   if (!rows.length) {
     svg.append('rect').attr('x', margin.left).attr('y', margin.top).attr('width', innerW).attr('height', innerH).attr('rx', 4).attr('fill','#f8fcff').attr('stroke','#e5f2f6');
     svg.append('text').attr('x', width/2).attr('y', height/2).attr('text-anchor','middle').attr('fill','var(--muted)').text('No rainfall data');
@@ -811,7 +811,7 @@ function drawRainfallBars(containerId, rows, title) {
   const total = d3.sum(rows, d => d.rain);
   const yearSpan = `${rows[0].month.slice(0,4)}-${rows[rows.length - 1].month.slice(0,4)}`;
   const metaText = `${yearSpan} | ${rows.length.toLocaleString()} months | total ${total.toLocaleString(undefined,{maximumFractionDigits:0})} mm`;
-  svg.append('text').attr('x', 6).attr('y', 24).attr('font-size', compact ? 8.5 : 11).attr('fill','#5b7580').text(metaText);
+  svg.append('text').attr('x', 8).attr('y', compact ? 28 : 36).attr('font-size', compact ? 8.5 : 11).attr('fill','#5b7580').text(metaText);
   const x = d3.scaleTime().domain(d3.extent(rows, d => d.x)).range([0, innerW]);
   const y = d3.scaleLinear().domain([0, d3.max(rows, d => d.rain) || 1]).nice(compact ? 4 : 6).range([innerH,0]);
   const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
@@ -820,7 +820,7 @@ function drawRainfallBars(containerId, rows, title) {
   const xAxis = g.append('g').attr('class','axis').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(x).ticks(compact ? 3 : 7).tickFormat(d3.timeFormat('%Y')));
   xAxis.selectAll('text').attr('dy','1em');
   g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(compact ? 3 : 6).tickFormat(d => d >= 1000 ? `${d / 1000}k` : d));
-  svg.append('text').attr('x', margin.left).attr('y', margin.top - 5).attr('font-size', compact ? 8.5 : 11).attr('fill','#496773').attr('font-weight',700).text('Rainfall (mm)');
+  svg.append('text').attr('x', margin.left).attr('y', margin.top - 8).attr('font-size', compact ? 8.5 : 11).attr('fill','#496773').attr('font-weight',700).text('Rainfall (mm)');
   const barW = Math.max(2, Math.min(12, innerW / rows.length * .78));
   g.selectAll('rect.rfbar').data(rows).join('rect')
     .attr('class','rfbar')
