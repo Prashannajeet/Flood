@@ -310,7 +310,7 @@ const tip = document.getElementById('tip');
 payload.stations.forEach(s => stationSelect.add(new Option(s.name, s.name)));
 (payload.rainfallStations || []).forEach(s => rainfallSelect.add(new Option(s.station_name, s.station_code)));
 
-const map = L.map('map', { scrollWheelZoom:true, wheelDebounceTime:24, wheelPxPerZoomLevel:42, zoomControl:true });
+const map = L.map('map', { scrollWheelZoom:true, wheelDebounceTime:40, wheelPxPerZoomLevel:120, zoomControl:true });
 map.scrollWheelZoom.enable();
 map.getContainer().addEventListener('wheel', event => {
   event.preventDefault();
