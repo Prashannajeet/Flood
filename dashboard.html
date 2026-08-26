@@ -160,7 +160,8 @@ body.report-v1 th { font-size:9px; color:#63808b; }
 body.report-v1 .data-note { padding:4px 8px 5px; font-size:9px; color:#6a8792; }
 body.report-v1 .chart { min-height:0; height:auto; padding:2px 7px 0; }
 body.report-v1 #rainfallChart { height:174px; }
-body.report-v1 #levelChart, body.report-v1 #qChart { height:121px; }
+body.report-v1 #levelChart { height:121px; }
+body.report-v1 #qChart { height:135px; }
 body.report-v1 .chart + .chart { border-top:1px solid #e5f2f6; }
 body.report-v1 svg text { font-size:10px; fill:#12313f; }
 body.report-v1 .axis text { font-size:9px; fill:#6a8792; }
@@ -623,13 +624,49 @@ function summarize(site) {
   if (rc) rc.textContent = `${level.count.toLocaleString()} / ${q.count.toLocaleString()}`;
 }
 function drawLine(containerId, rows, title, yLabel, cls) {
-  const el = document.getElementById(containerId); el.innerHTML = ''; const width = el.clientWidth || 600; const height = document.body.classList.contains('report-v1') ? (containerId === 'qChart' || containerId === 'levelChart' ? 116 : 140) : 270; const margin = {top:document.body.classList.contains('report-v1') ? 16 : 26,right:18,bottom:document.body.classList.contains('report-v1') ? 24 : 48,left:52}; const innerW = width - margin.left - margin.right; const innerH = height - margin.top - margin.bottom;
-  const svg = d3.select(el).append('svg').attr('width', width).attr('height', height).attr('viewBox', `0 0 ${width} ${height}`); svg.append('text').attr('x', 0).attr('y', 16).attr('font-weight', 700).text(title);
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  const compact = document.body.classList.contains('report-v1');
+  const isDischarge = cls.includes('q');
+  const width = Math.max(360, el.clientWidth || 600);
+  const height = compact ? (isDischarge ? 130 : 116) : 270;
+  const margin = compact ? {top:18,right:18,bottom:28,left:52} : {top:26,right:18,bottom:48,left:58};
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+  const svg = d3.select(el).append('svg').attr('width','100%').attr('height',height).attr('viewBox',`0 0 ${width} ${height}`).attr('preserveAspectRatio','none');
+  svg.append('text').attr('x', 4).attr('y', 14).attr('font-weight', 700).attr('fill','#12313f').text(title);
   if (!rows.length) { svg.append('text').attr('x', width/2).attr('y', height/2).attr('text-anchor','middle').attr('fill','var(--muted)').text('No data'); return; }
-  rows = rows.map(d => ({...d, x:parseMonth(d.month)})); const x = d3.scaleTime().domain(d3.extent(rows, d => d.x)).range([0, innerW]); const ext = d3.extent(rows.flatMap(d => [d.min, d.max])); const pad = Math.max((ext[1]-ext[0])*.08, .1); const y = d3.scaleLinear().domain([ext[0]-pad, ext[1]+pad]).nice().range([innerH,0]); const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-  g.append('rect').attr('width', innerW).attr('height', innerH).attr('fill','none').attr('stroke','var(--line)'); g.append('g').attr('class','gridline').call(d3.axisLeft(y).ticks(5).tickSize(-innerW).tickFormat('')).call(s => s.select('.domain').remove()); g.append('g').attr('class','axis').attr('transform',`translate(0,${innerH})`).call(d3.axisBottom(x).ticks(width < 520 ? 4 : 7).tickFormat(d3.timeFormat('%Y'))); g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(5));
-  g.append('text').attr('x', innerW/2).attr('y', innerH+38).attr('text-anchor','middle').text('Time'); g.append('text').attr('transform','rotate(-90)').attr('x',-innerH/2).attr('y',-50).attr('text-anchor','middle').text(yLabel); const line = d3.line().x(d => x(d.x)).y(d => y(d.mean)); g.append('path').datum(rows).attr('class', cls).attr('d', line);
-  g.selectAll('circle').data(rows).join('circle').attr('cx',d=>x(d.x)).attr('cy',d=>y(d.mean)).attr('r',2.4).attr('fill', cls.includes('q') ? 'var(--accent2)' : 'var(--accent)').attr('stroke','var(--panel)').attr('stroke-width',1).on('pointermove', (event,d) => { tip.style.opacity=1; tip.style.left=`${event.clientX+12}px`; tip.style.top=`${event.clientY+12}px`; tip.innerHTML=`${fmtMonth(d.x)}<br>Mean: ${d.mean.toFixed(3)}<br>Min-Max: ${d.min.toFixed(3)}-${d.max.toFixed(3)}<br>Records: ${d.n}`; }).on('pointerleave', () => tip.style.opacity=0);
+  rows = rows.map(d => ({...d, x:parseMonth(d.month), mean:Number(d.mean), min:Number(d.min), max:Number(d.max)})).filter(d => d.x && Number.isFinite(d.mean));
+  if (!rows.length) { svg.append('text').attr('x', width/2).attr('y', height/2).attr('text-anchor','middle').attr('fill','var(--muted)').text('No valid data'); return; }
+  const x = d3.scaleTime().domain(d3.extent(rows, d => d.x)).range([0, innerW]);
+  const visibleExtent = isDischarge ? d3.extent(rows, d => d.mean) : d3.extent(rows.flatMap(d => [d.min, d.max]));
+  let [yMin, yMax] = visibleExtent;
+  if (yMin === yMax) { yMin -= 1; yMax += 1; }
+  const pad = Math.max((yMax - yMin) * .1, isDischarge ? 1 : .1);
+  const y = d3.scaleLinear().domain([Math.max(0, yMin - pad), yMax + pad]).nice().range([innerH,0]);
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+  g.append('rect').attr('width', innerW).attr('height', innerH).attr('fill','#f8fcff').attr('stroke','#d7edf3');
+  g.append('g').attr('class','gridline').call(d3.axisLeft(y).ticks(compact ? 4 : 5).tickSize(-innerW).tickFormat('')).call(s => s.select('.domain').remove());
+  g.append('g').attr('class','axis').attr('transform',`translate(0,${innerH})`).call(d3.axisBottom(x).ticks(width < 520 ? 4 : 7).tickFormat(d3.timeFormat('%Y')));
+  g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(compact ? 4 : 5).tickFormat(d => d >= 1000 ? `${d / 1000}k` : d));
+  svg.append('text').attr('x', margin.left).attr('y', margin.top - 5).attr('font-size', compact ? 9 : 11).attr('font-weight',700).attr('fill','#496773').text(yLabel);
+  if (isDischarge) {
+    const band = d3.area()
+      .defined(d => Number.isFinite(d.min) && Number.isFinite(d.max))
+      .x(d => x(d.x))
+      .y0(d => y(Math.max(y.domain()[0], Math.min(y.domain()[1], d.min))))
+      .y1(d => y(Math.max(y.domain()[0], Math.min(y.domain()[1], d.max))));
+    g.append('path').datum(rows).attr('d', band).attr('fill','#dd8a4c').attr('opacity',.13);
+  }
+  const line = d3.line().defined(d => Number.isFinite(d.mean)).x(d => x(d.x)).y(d => y(d.mean));
+  g.append('path').datum(rows).attr('class', cls).attr('d', line).attr('fill','none').attr('stroke-width', isDischarge ? 2.2 : 1.9);
+  const peak = rows.reduce((a,b) => b.mean > a.mean ? b : a, rows[0]);
+  if (isDischarge) {
+    g.append('circle').attr('cx',x(peak.x)).attr('cy',y(peak.mean)).attr('r',3.6).attr('fill','#dd8a4c').attr('stroke','#fff').attr('stroke-width',1.2);
+    g.append('text').attr('x',Math.min(innerW - 4, x(peak.x) + 6)).attr('y',Math.max(10, y(peak.mean) - 6)).attr('text-anchor', x(peak.x) > innerW * .78 ? 'end' : 'start').attr('font-size',9).attr('font-weight',700).attr('fill','#7c3f10').text(`Mean peak ${peak.mean.toLocaleString(undefined,{maximumFractionDigits:0})}`);
+  }
+  g.selectAll('circle.series-dot').data(rows).join('circle').attr('class','series-dot').attr('cx',d=>x(d.x)).attr('cy',d=>y(d.mean)).attr('r',isDischarge ? 2 : 2.4).attr('fill', isDischarge ? 'var(--accent2)' : 'var(--accent)').attr('stroke','var(--panel)').attr('stroke-width',1).on('pointermove', (event,d) => { tip.style.opacity=1; tip.style.left=`${event.clientX+12}px`; tip.style.top=`${event.clientY+12}px`; tip.innerHTML=`${fmtMonth(d.x)}<br>Mean: ${d.mean.toFixed(3)}<br>Min-Max: ${d.min.toFixed(3)}-${d.max.toFixed(3)}<br>Records: ${d.n}`; }).on('pointerleave', () => tip.style.opacity=0);
 }
 function addRows(bodyId, rows, render) {
   const body = document.getElementById(bodyId);
