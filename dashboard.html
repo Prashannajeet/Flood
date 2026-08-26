@@ -499,7 +499,10 @@ L.control.layers(baseMaps, overlayMaps, { collapsed:true, sortLayers:true }).add
 L.control.scale({ imperial:false, metric:true, position:'bottomleft' }).addTo(map);
 const fitGroup = L.featureGroup([...Array.from(markers.values()), ...payload.gisLayers.filter(l => l.default).map(l => gisLayerObjects.get(l.id)).filter(Boolean)]);
 const defaultCatchmentLayer = gisLayerObjects.get('catchment');
-if (defaultCatchmentLayer && defaultCatchmentLayer.getBounds().isValid()) {
+const projectAoiDefaultBounds = L.latLngBounds([[23.08,75.03],[24.68,77.38]]);
+if (projectAoiDefaultBounds.isValid()) {
+  map.fitBounds(projectAoiDefaultBounds, { padding:[8,8], maxZoom:9 });
+} else if (defaultCatchmentLayer && defaultCatchmentLayer.getBounds().isValid()) {
   map.fitBounds(defaultCatchmentLayer.getBounds(), { padding:[24,24] });
 } else if (fitGroup.getLayers().length) {
   map.fitBounds(fitGroup.getBounds(), { padding:[22,22] });
