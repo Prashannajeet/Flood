@@ -407,15 +407,6 @@ const rainfallMarkers = new Map();
   rainfallMarkers.set(s.station_code, m);
   bounds.push([s.latitude, s.longitude]);
 });
-const onlineCwcLayer = L.layerGroup();
-if (payload.onlineCwc && payload.onlineCwc.stations) {
-  payload.onlineCwc.stations.forEach(st => {
-    const m = L.circleMarker([st.lat, st.lon], { radius:5, color:'#2563eb', weight:1.5, fillColor:'#60a5fa', fillOpacity:.65 });
-    m.addTo(onlineCwcLayer);
-  });
-  overlayMaps['Online CWC stations'] = onlineCwcLayer;
-  onlineCwcLayer.addTo(map);
-}
 const imergDate = payload.remoteSensing?.imergLayerDate || '2026-08-05';
 const imergLayer = L.tileLayer(`https://gibs-a.earthdata.nasa.gov/wmts/epsg3857/best/IMERG_Precipitation_Rate/default/${imergDate}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`, {
   minZoom: 1,
@@ -723,10 +714,8 @@ function updateTables() {
     tr.innerHTML = `<td>${l.name}</td><td class="num">${l.featureCount.toLocaleString()}</td><td class="num">${l.points.toLocaleString()}</td>`;
     lt.appendChild(tr);
   });
-  const online = payload.onlineCwc;
-  const onlineText = online ? ` Online CWC layer: ${online.stationCount} stations, ${online.rowCount.toLocaleString()} public rows synced ${online.syncedAt}.` : '';
   const rfText = payload.rainfallRdbms ? ` Rainfall RDBMS: ${payload.rainfallRdbms.station_count} stations, ${payload.rainfallRdbms.daily_row_count.toLocaleString()} daily rows.` : '';
-  document.getElementById('layerNote').textContent = `${payload.gisLayers.length} GIS overlays loaded from the Shape Files folder. Vector overlays are normalized to WGS84 for web display; Kundaliya flood rasters are sourced from UTM 43N (EPSG:32643) and rendered in Web Mercator (EPSG:3857) for Google/Mapbox alignment. ${floodInundationLayers.length} flood inundation overlays available.${onlineText}${rfText}`;
+  document.getElementById('layerNote').textContent = `${payload.gisLayers.length} GIS overlays loaded from the Shape Files folder. Vector overlays are normalized to WGS84 for web display; Kundaliya flood rasters are sourced from UTM 43N (EPSG:32643) and rendered in Web Mercator (EPSG:3857) for Google/Mapbox alignment. ${floodInundationLayers.length} flood inundation overlays available.${rfText}`;
 
   const stBody = document.getElementById('siteTable');
   stBody.innerHTML = '';
@@ -748,18 +737,6 @@ function updateTables() {
     });
   }
 
-  const onlineMeta = document.getElementById('onlineMeta');
-  const onlineTable = document.getElementById('onlineTable');
-  if (onlineMeta && onlineTable && payload.onlineCwc) {
-    onlineMeta.innerHTML = `<span class="status-dot"></span>${payload.onlineCwc.stationCount} online CWC stations, ${payload.onlineCwc.rowCount.toLocaleString()} rows. <a class="source-link" href="${payload.onlineCwc.datasetPage}" target="_blank" rel="noopener">NWDP source</a>`;
-    onlineTable.innerHTML = '';
-    payload.onlineCwc.nearestToLocal.forEach(row => {
-      const nearest = row.nearest[0];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${row.site}</td><td>${nearest.station}<br><span class="panel-meta">${nearest.river}, ${nearest.district}</span></td><td class="num">${nearest.distanceKm.toFixed(1)} km</td><td class="num">${nearest.records.toLocaleString()}</td>`;
-      onlineTable.appendChild(tr);
-    });
-  }
 }
 function drawRainfallBars(containerId, rows, title) {
   const el = document.getElementById(containerId);
