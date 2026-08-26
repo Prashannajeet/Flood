@@ -442,7 +442,8 @@ let floodSwipeToggle = null;
 let floodSwipeControl = null;
 let floodSwipeValue = null;
 function applyFloodDisplayTools() {
-  const opacity = Number(floodOpacityControl?.value || 68) / 100;
+  const transparency = Number(floodOpacityControl?.value || 32);
+  const opacity = (100 - transparency) / 100;
   const swipeEnabled = Boolean(floodSwipeToggle?.checked);
   const swipe = Number(floodSwipeControl?.value || 50);
   floodOverlayObjects.forEach(({ image }) => {
@@ -450,7 +451,7 @@ function applyFloodDisplayTools() {
     const el = image.getElement();
     if (el) el.style.clipPath = swipeEnabled ? `inset(0 ${100 - swipe}% 0 0)` : '';
   });
-  if (floodOpacityValue) floodOpacityValue.textContent = `${Math.round(opacity * 100)}%`;
+  if (floodOpacityValue) floodOpacityValue.textContent = `${Math.round(transparency)}%`;
   if (floodSwipeValue) floodSwipeValue.textContent = `${swipe}%`;
   swipeLine.style.display = swipeEnabled ? 'block' : 'none';
   swipeLine.style.left = `${swipe}%`;
@@ -460,7 +461,7 @@ floodTools.onAdd = function() {
   const div = L.DomUtil.create('div', 'map-adjust-control leaflet-control');
   div.innerHTML = `
     <b>Flood Overlay Tools</b>
-    <label>Transparency <span class="map-adjust-value" id="floodOpacityValue">68%</span><input id="floodOpacityControl" type="range" min="0" max="100" value="68"></label>
+    <label>Transparency <span class="map-adjust-value" id="floodOpacityValue">32%</span><input id="floodOpacityControl" type="range" min="0" max="100" value="32"></label>
     <div class="map-adjust-row"><label><input id="floodSwipeToggle" type="checkbox"> Swipe compare</label><span class="map-adjust-value" id="floodSwipeValue">50%</span></div>
     <label>Swipe position<input id="floodSwipeControl" type="range" min="0" max="100" value="50"></label>
   `;
