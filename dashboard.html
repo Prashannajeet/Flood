@@ -168,6 +168,10 @@ body.report-v1 .line-q { stroke:#dd8a4c; }
 .sug-map-control .mini-note { color:#6a8792; font-size:10px; margin-top:5px; }
 .sug-map-control .mini-chart-title { color:#496773; font-size:10px; font-weight:700; margin:5px 0 3px; text-transform:uppercase; }
 body.report-v1 .leaflet-top.leaflet-right { max-width:340px; }
+.flood-depth-legend { background:rgba(255,255,255,.94); border:1px solid #cbe4ed; box-shadow:0 8px 22px rgba(34,82,102,.14); padding:7px 9px; color:#12313f; font:11px/1.25 "Segoe UI", Arial, sans-serif; }
+.flood-depth-legend b { display:block; font-size:11px; margin-bottom:5px; }
+.flood-depth-ramp { width:148px; height:9px; border-radius:999px; background:linear-gradient(90deg,#b9e6f2,#4a9cd6,#1f519d,#232670); margin-bottom:4px; }
+.flood-depth-labels { display:flex; justify-content:space-between; color:#5b7580; font-size:10px; }
 @media (max-width:1100px) {
   body.report-v1 { overflow:auto; }
   body.report-v1 .app { height:auto; overflow:visible; }
@@ -408,6 +412,22 @@ jrcLayerDefs.forEach(([label, layer, opacity]) => {
     attribution: 'Surface water &copy; EC JRC/Google'
   });
 });
+
+const floodInundationLayers = [{"scenario":"Q25","label":"Kundaliya Q25 flood inundation depth","metric":"Maximum flood depth","url":"/app/static/flood_inundation/kundaliya_q25_depth_max.png","bounds":[[22.55252689,75.13112479],[26.06789696,77.48566819]],"opacity":0.68,"maxDepthM":8.46,"peakCms":null,"volumeMcm":null,"imageSize":[1032,1700]},{"scenario":"Q50","label":"Kundaliya Q50 flood inundation depth","metric":"Maximum flood depth","url":"/app/static/flood_inundation/kundaliya_q50_depth_max.png","bounds":[[22.55252689,75.13112479],[26.06789696,77.48566819]],"opacity":0.68,"maxDepthM":9.1,"peakCms":null,"volumeMcm":null,"imageSize":[1032,1700]},{"scenario":"Q100","label":"Kundaliya Q100 flood inundation depth","metric":"Maximum flood depth","url":"/app/static/flood_inundation/kundaliya_q100_depth_max.png","bounds":[[22.55252689,75.13112479],[26.06789696,77.48566819]],"opacity":0.68,"maxDepthM":8.98,"peakCms":null,"volumeMcm":null,"imageSize":[1032,1700]},{"scenario":"PMF","label":"Kundaliya PMF flood inundation depth","metric":"Maximum flood depth","url":"/app/static/flood_inundation/kundaliya_pmf_depth_max.png","bounds":[[22.55252689,75.13112479],[26.06789696,77.48566819]],"opacity":0.62,"maxDepthM":17.12,"peakCms":null,"volumeMcm":null,"imageSize":[1032,1700]}];
+const floodOverlayObjects = [];
+floodInundationLayers.forEach(layer => {
+  const image = L.imageOverlay(layer.url, layer.bounds, { opacity: layer.opacity || 0.65, interactive:false });
+  overlayMaps[`Flood inundation - ${layer.label}`] = image;
+  floodOverlayObjects.push(image);
+  if (layer.scenario === 'Q100') image.addTo(map);
+});
+const floodLegend = L.control({ position:'bottomright' });
+floodLegend.onAdd = function() {
+  const div = L.DomUtil.create('div', 'flood-depth-legend');
+  div.innerHTML = '<b>Kundaliya flood depth</b><div class="flood-depth-ramp"></div><div class="flood-depth-labels"><span>0.02 m</span><span>5 m</span><span>10+ m</span></div>';
+  return div;
+};
+floodLegend.addTo(map);
 L.control.layers(baseMaps, overlayMaps, { collapsed:true, sortLayers:true }).addTo(map);
 L.control.scale({ imperial:false, metric:true, position:'bottomleft' }).addTo(map);
 const fitGroup = L.featureGroup([...Array.from(markers.values()), ...payload.gisLayers.filter(l => l.default).map(l => gisLayerObjects.get(l.id)).filter(Boolean)]);
@@ -617,7 +637,7 @@ function updateTables() {
   const online = payload.onlineCwc;
   const onlineText = online ? ` Online CWC layer: ${online.stationCount} stations, ${online.rowCount.toLocaleString()} public rows synced ${online.syncedAt}.` : '';
   const rfText = payload.rainfallRdbms ? ` Rainfall RDBMS: ${payload.rainfallRdbms.station_count} stations, ${payload.rainfallRdbms.daily_row_count.toLocaleString()} daily rows.` : '';
-  document.getElementById('layerNote').textContent = `${payload.gisLayers.length} GIS overlays loaded from the Shape Files folder.${onlineText}${rfText}`;
+  document.getElementById('layerNote').textContent = `${payload.gisLayers.length} GIS overlays loaded from the Shape Files folder. ${floodInundationLayers.length} Kundaliya flood inundation overlays available.${onlineText}${rfText}`;
 
   const stBody = document.getElementById('siteTable');
   stBody.innerHTML = '';

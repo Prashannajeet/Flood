@@ -1,0 +1,102 @@
+[
+  {
+    "scenario": "Q25",
+    "label": "Kundaliya Q25 flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/kundaliya_q25_depth_max.png",
+    "bounds": [
+      [
+        22.55252689,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 0.68,
+    "maxDepthM": 8.46,
+    "sourceRaster": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Flood Inundation\\MKP_Dam_Break\\outputs\\compact_flood_rasters\\Kundaliya\\Q25\\KUNDALIYA_Q25_DEPTH_MAX.tif",
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1032,
+      1700
+    ]
+  },
+  {
+    "scenario": "Q50",
+    "label": "Kundaliya Q50 flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/kundaliya_q50_depth_max.png",
+    "bounds": [
+      [
+        22.55252689,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 0.68,
+    "maxDepthM": 9.1,
+    "sourceRaster": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Flood Inundation\\MKP_Dam_Break\\outputs\\compact_flood_rasters\\Kundaliya\\Q50\\KUNDALIYA_Q50_DEPTH_MAX.tif",
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1032,
+      1700
+    ]
+  },
+  {
+    "scenario": "Q100",
+    "label": "Kundaliya Q100 flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/kundaliya_q100_depth_max.png",
+    "bounds": [
+      [
+        22.55252689,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 0.68,
+    "maxDepthM": 8.98,
+    "sourceRaster": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Flood Inundation\\MKP_Dam_Break\\outputs\\compact_flood_rasters\\Kundaliya\\Q100\\KUNDALIYA_Q100_DEPTH_MAX.tif",
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1032,
+      1700
+    ]
+  },
+  {
+    "scenario": "PMF",
+    "label": "Kundaliya PMF flood inundation depth",
+    "metric": "Maximum flood depth",
+    "url": "/app/static/flood_inundation/kundaliya_pmf_depth_max.png",
+    "bounds": [
+      [
+        22.55252689,
+        75.13112479
+      ],
+      [
+        26.06789696,
+        77.48566819
+      ]
+    ],
+    "opacity": 0.62,
+    "maxDepthM": 17.12,
+    "sourceRaster": "D:\\01 Project\\Development\\Mohan_Kundaliya\\Flood Inundation\\MKP_Dam_Break\\outputs\\compact_flood_rasters\\Kundaliya\\PMF\\KUNDALIYA_PMF_DEPTH_MAX.tif",
+    "peakCms": null,
+    "volumeMcm": null,
+    "imageSize": [
+      1032,
+      1700
+    ]
+  }
+]
