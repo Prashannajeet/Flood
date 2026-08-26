@@ -94,7 +94,8 @@ svg text { fill:var(--ink); }
 .leaflet-control-layers input { margin:0; }
 .leaflet-control-layers-separator { border-top:1px solid var(--line-soft); margin:8px -2px; }
 .leaflet-control-scale-line { font:12px/1.2 "Segoe UI", "Inter", Arial, sans-serif; color:var(--ink); border-color:var(--ink); background:rgba(255,255,255,.82); }
-.leaflet-container { background:#dfe9ec; }
+.leaflet-container { background:#dfe9ec; overscroll-behavior:contain; touch-action:none; }
+#map { overscroll-behavior:contain; }
 @media (max-width:1080px) {
   .topbar { grid-template-columns:1fr; align-items:start; }
   .controls { justify-content:flex-start; }
@@ -301,7 +302,12 @@ const tip = document.getElementById('tip');
 payload.stations.forEach(s => stationSelect.add(new Option(s.name, s.name)));
 (payload.rainfallStations || []).forEach(s => rainfallSelect.add(new Option(s.station_name, s.station_code)));
 
-const map = L.map('map', { scrollWheelZoom:true, zoomControl:true });
+const map = L.map('map', { scrollWheelZoom:true, wheelDebounceTime:24, wheelPxPerZoomLevel:42, zoomControl:true });
+map.scrollWheelZoom.enable();
+map.getContainer().addEventListener('wheel', event => {
+  event.preventDefault();
+  event.stopPropagation();
+}, { passive:false });
 const mapboxToken = '__MAPBOX_TOKEN__';
 const mapboxOutdoors = L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`, { maxZoom:19, tileSize:256, attribution:'&copy; Mapbox &copy; OpenStreetMap' }).addTo(map);
 const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap contributors' });
