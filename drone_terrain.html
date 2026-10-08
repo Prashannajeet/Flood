@@ -91,7 +91,7 @@ if (typeof L === 'undefined') {
     map.createPane(kind).style.zIndex = String(400+index*10);
     if (kind === 'hillshade') map.getPane(kind).style.mixBlendMode = 'multiply';
     const available = new Set(survey.availableTiles[kind]);
-    const layer = L.tileLayer('/app/static/drone_terrain/'+kind+'/{z}/{x}/{y}.png', {
+    const layer = L.tileLayer('app/static/drone_terrain/'+kind+'/{z}/{x}/{y}.png', {
       pane:kind, minNativeZoom:survey.minZoom, maxNativeZoom:survey.maxNativeZoom,
       maxZoom:20, opacity:1-initialTransparency[kind]/100, errorTileUrl:transparentTile,
       attribution:'NITA AI drone survey R04', keepBuffer:2
