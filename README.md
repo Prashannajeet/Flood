@@ -18,6 +18,22 @@ The dashboard is embedded from `dashboard.html`; the Mapbox token is injected fr
   Orthomosaic transparency starts at 50%; each raster has a 0-100% transparency slider.
   Grey and satellite basemaps are available, with Mapbox Outdoors when configured.
 
+The raster stack and layer menu run top to bottom: **Ortho, Hillshade, DEM**.
+The AOI remains above the rasters. Layer tools include a selected-pair swipe view,
+and overlap blending (normal, multiply, screen and difference). Comparison modes
+temporarily isolate the selected pair; returning to Layer stack restores the
+previous visibility, transparency and ordering. Blend difference is a visual RGB
+comparison, not a numerical elevation or change analysis.
+
+Metric measurements support distance and polygon area, plus perimeter, editable
+vertices, deletion and GeoJSON export. Lengths are horizontal geodesic metres/km;
+areas are square metres, hectares or square kilometres. Export properties retain
+unrounded `length_m`, `area_m2` and `perimeter_m` values and the measurement method.
+Measurements are session-local and do not extract terrain slope or DEM elevations.
+Drawing uses [Leaflet.draw](https://leaflet.github.io/Leaflet.draw/docs/leaflet-draw-latest.html),
+geodesic calculations use Turf 7.2.0, and swipe uses
+[Leaflet Side-by-Side](https://github.com/digidem/leaflet-side-by-side).
+
 Drone sources are UTM 43N (EPSG:32643). Tiles are reprojected to EPSG:3857 for web
 basemap alignment, while the cursor displays UTM 43N coordinates. Native zoom levels
 11-16 have approximately 2 m ground pixels at maximum zoom; higher zooms overzoom

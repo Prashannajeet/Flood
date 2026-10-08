@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NITA AI | Mohanpura Drone Terrain</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
 <style>
 * { box-sizing:border-box; }
+[hidden] { display:none !important; }
 html, body { margin:0; height:100%; font-family:"Segoe UI",Arial,sans-serif; color:#183b48; background:#f6fbff; }
 body { display:flex; flex-direction:column; }
 .header { padding:12px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; border-bottom:1px solid #d7e4ea; }
@@ -21,10 +23,31 @@ h1 { font-size:18px; margin:0; font-weight:600; }
 .leaflet-control-layers { border:1px solid #d1dfe5 !important; box-shadow:0 2px 6px #173c4820; font-size:13px; }
 .leaflet-control-layers-expanded { padding:10px 12px; }
 .overlay-tools, .legend { background:#fffffff5; border:1px solid #d1dfe5; border-radius:4px; padding:10px 12px; box-shadow:0 2px 6px #173c4820; }
-.overlay-tools { width:212px; }
+.overlay-tools { width:212px; max-height:calc(100vh - 190px); overflow:auto; }
 .overlay-tools summary { cursor:pointer; font-size:13px; font-weight:600; }
 .transparency-row { margin-top:10px; }
 .transparency-row label { display:flex; justify-content:space-between; font-size:12px; }
+.tool-section { margin-top:11px; border-top:1px solid #dbe6eb; padding-top:9px; }
+.tool-section summary { font-size:12px; }
+.tool-field { display:block; margin-top:9px; font-size:12px; }
+.tool-field select { display:block; width:100%; padding:5px 6px; margin-top:4px; border:1px solid #c8d9e1; border-radius:3px; background:#fff; color:#183b48; font:inherit; }
+.tool-field select:focus-visible, .icon-button:focus-visible { outline:2px solid #237f95; outline-offset:2px; }
+.tool-buttons { display:flex; gap:6px; margin-top:8px; }
+.icon-button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid #c8d9e1; border-radius:3px; background:#fff; color:#235267; cursor:pointer; }
+.icon-button svg { width:16px; height:16px; }
+.icon-button:disabled { opacity:.4; cursor:default; }
+.measurement-results { font-size:12px; margin-top:8px; max-height:125px; overflow:auto; }
+.measurement-item { padding:5px 0; border-top:1px solid #e5edf1; line-height:1.5; }
+.measurement-item:first-child { border-top:0; }
+.measurement-results:empty { display:none; }
+.leaflet-draw-toolbar a { background-image:none !important; display:flex; align-items:center; justify-content:center; }
+.leaflet-draw-toolbar a svg { width:17px; height:17px; color:#235267; }
+.leaflet-sbs-range { height:42px !important; margin:0 !important; background:transparent !important; accent-color:#237f95; }
+.leaflet-sbs-range::-webkit-slider-runnable-track { background:transparent !important; }
+.leaflet-sbs-range::-moz-range-track { background:transparent !important; }
+.leaflet-sbs-divider { border-color:#fff !important; box-shadow:0 0 3px #12313f; pointer-events:none; }
+.measurement-label { background:#ffffffee; border:1px solid #bdd2dc; color:#183b48; font-size:12px; padding:4px 7px; box-shadow:0 1px 3px #183b4820; }
+.analysis-note { font-size:11px; color:#55717f; margin:8px 0 0; }
 input[type=range] { display:block; width:100%; height:18px; margin:3px 0 0; accent-color:#237f95; cursor:pointer; }
 .legend { width:215px; font-size:12px; }
 .legend-title { font-weight:600; margin-bottom:7px; }
@@ -58,6 +81,9 @@ input[type=range] { display:block; width:100%; height:18px; margin:3px 0 0; acce
   <details class="source-details"><summary>Survey details</summary><div class="content" id="source-content"></div></details>
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/digidem/leaflet-side-by-side@cd74619044c9f0533efa090161c335f2ccea13e7/leaflet-side-by-side.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
 <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script>
@@ -85,6 +111,8 @@ if (typeof L === 'undefined') {
   const emptyCanvas = document.createElement('canvas'); emptyCanvas.width=1; emptyCanvas.height=1;
   const transparentTile = emptyCanvas.toDataURL();
   const layers = {};
+  const rasterOrder = ['ortho','hillshade','dem'];
+  const layerNames = {ortho:'Ortho',hillshade:'Hillshade',dem:'DEM'};
   const initialTransparency = {dem:0, hillshade:60, ortho:50};
   let tileErrorCount = 0;
   for (const [index, kind] of ['dem','hillshade','ortho'].entries()) {
@@ -111,20 +139,46 @@ if (typeof L === 'undefined') {
   map.createPane('aoi').style.zIndex='450';
   const aoi = L.geoJSON(survey.aoi, {pane:'aoi', style:{color:'#b32969', weight:1.8, opacity:1, fill:false}}).addTo(map);
   aoi.bindPopup('Mohanpura survey AOI');
-  const overlays = {'Survey AOI':aoi, 'DEM elevation':layers.dem, 'Hillshade terrain':layers.hillshade, 'Orthomosaic':layers.ortho};
-  L.control.layers(baseMaps, overlays, {collapsed:true, position:'topright'}).addTo(map);
+  const overlays = {'1. Ortho':layers.ortho, '2. Hillshade':layers.hillshade, '3. DEM':layers.dem, 'Survey AOI':aoi};
+  const layerControl = L.control.layers(baseMaps, overlays, {collapsed:true, position:'topright'}).addTo(map);
   L.control.scale({position:'bottomleft', imperial:false, maxWidth:120}).addTo(map);
   const tools = L.control({position:'topleft'});
   tools.onAdd = function() {
     const box = L.DomUtil.create('details','overlay-tools'); box.open=true;
-    box.innerHTML='<summary>Layer transparency</summary>'+['dem','hillshade','ortho'].map(kind => {
-      const name={dem:'DEM',hillshade:'Hillshade',ortho:'Ortho'}[kind];
+    box.innerHTML='<summary>Layer tools</summary>'+rasterOrder.map(kind => {
+      const name=layerNames[kind];
       return `<div class="transparency-row"><label for="alpha-${kind}">${name}<output id="value-${kind}">${initialTransparency[kind]}%</output></label><input id="alpha-${kind}" aria-label="${name} transparency" type="range" min="0" max="100" step="1" value="${initialTransparency[kind]}"></div>`;
-    }).join('');
+    }).join('')+`<details class="tool-section" id="comparison-tools"><summary>Layer comparison</summary>
+      <label class="tool-field" for="comparison-mode">Mode<select id="comparison-mode"><option value="stack">Layer stack</option><option value="swipe">Swipe comparison</option><option value="overlap">Layer overlap</option></select></label>
+      <div id="comparison-pair" hidden>
+        <label class="tool-field" for="comparison-upper"><span id="upper-label">Left layer</span><select id="comparison-upper">${rasterOrder.map(k=>`<option value="${k}">${layerNames[k]}</option>`).join('')}</select></label>
+        <label class="tool-field" for="comparison-lower"><span id="lower-label">Right layer</span><select id="comparison-lower">${rasterOrder.map(k=>`<option value="${k}" ${k==='hillshade'?'selected':''}>${layerNames[k]}</option>`).join('')}</select></label>
+        <label class="tool-field" id="blend-field" for="overlap-blend" hidden>Blend<select id="overlap-blend"><option value="normal">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="difference">Difference</option></select></label>
+        <p id="blend-note" class="analysis-note" hidden>Visual comparison of rendered layers.</p>
+      </div>
+    </details>
+    <details class="tool-section" id="measurement-tools"><summary>Metric measurements</summary>
+      <div class="tool-buttons">
+        <button type="button" class="icon-button" id="measure-distance" title="Measure distance (m / km)" aria-label="Measure distance"><i data-lucide="ruler"></i></button>
+        <button type="button" class="icon-button" id="measure-area" title="Measure area (m\u00b2 / ha / km\u00b2)" aria-label="Measure area"><i data-lucide="pentagon"></i></button>
+        <button type="button" class="icon-button" id="export-measurements" title="Export measurements as GeoJSON" aria-label="Export measurements" disabled><i data-lucide="download"></i></button>
+        <button type="button" class="icon-button" id="clear-measurements" title="Clear measurements" aria-label="Clear measurements" disabled><i data-lucide="trash-2"></i></button>
+      </div>
+      <div id="measurement-results" class="measurement-results" role="status" aria-live="polite"></div>
+    </details>`;
     L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box);
     return box;
   };
   tools.addTo(map);
+  for (const section of tools.getContainer().querySelectorAll('.tool-section')) {
+    section.addEventListener('toggle',()=>{
+      if (!section.open) return;
+      for (const other of tools.getContainer().querySelectorAll('.tool-section')) {
+        if (other!==section) other.open=false;
+      }
+    });
+  }
+  if (typeof lucide!=='undefined') lucide.createIcons();
   for (const kind of ['dem','hillshade','ortho']) {
     document.getElementById('alpha-'+kind).addEventListener('input', e => {
       const value=Number(e.target.value);
@@ -143,9 +197,193 @@ if (typeof L === 'undefined') {
   legend.addTo(map);
   function updateLegend() { legend.getContainer().hidden=!map.hasLayer(layers.dem); }
   map.on('overlayadd overlayremove',updateLegend);
+  function setTransparency(kind, value) {
+    layers[kind].setOpacity(1-value/100);
+    document.getElementById('alpha-'+kind).value=value;
+    document.getElementById('value-'+kind).textContent=value+'%';
+  }
+  const comparisonMode=document.getElementById('comparison-mode');
+  const upperSelect=document.getElementById('comparison-upper');
+  const lowerSelect=document.getElementById('comparison-lower');
+  let stackSnapshot=null;
+  let swipeControl=null;
+  function removeSwipe() {
+    if (swipeControl) { swipeControl.remove(); swipeControl=null; }
+  }
+  function syncComparisonInputs() {
+    [...layerControl.getContainer().querySelectorAll('.leaflet-control-layers-overlays input')].slice(0,3)
+      .forEach(input=>{ input.disabled=comparisonMode.value!=='stack'; });
+  }
+  map.on('baselayerchange overlayadd overlayremove zoomend',syncComparisonInputs);
+  for (const eventName of ['click','mouseenter','mouseover','focusin']) {
+    layerControl.getContainer().addEventListener(eventName,syncComparisonInputs);
+  }
+  function configureComparison() {
+    removeSwipe();
+    const mode=comparisonMode.value;
+    const upper=upperSelect.value, lower=lowerSelect.value;
+    if (upper===lower) return;
+    document.getElementById('comparison-pair').hidden=mode==='stack';
+    document.getElementById('blend-field').hidden=mode!=='overlap';
+    document.getElementById('blend-note').hidden=mode!=='overlap';
+    document.getElementById('upper-label').textContent=mode==='swipe'?'Left layer':'Upper layer';
+    document.getElementById('lower-label').textContent=mode==='swipe'?'Right layer':'Lower layer';
+    for (const option of upperSelect.options) option.disabled=option.value===lower;
+    for (const option of lowerSelect.options) option.disabled=option.value===upper;
+    if (mode!=='stack'&&!stackSnapshot) {
+      stackSnapshot=Object.fromEntries(rasterOrder.map(kind=>[kind, {
+        visible:map.hasLayer(layers[kind]),
+        transparency:Number(document.getElementById('alpha-'+kind).value),
+        zIndex:map.getPane(kind).style.zIndex,
+        blend:map.getPane(kind).style.mixBlendMode
+      }]));
+    }
+    for (const kind of rasterOrder) {
+      const pane=map.getPane(kind);
+      if (mode==='stack') {
+        if (stackSnapshot) {
+          const previous=stackSnapshot[kind];
+          if (previous.visible) layers[kind].addTo(map); else map.removeLayer(layers[kind]);
+          setTransparency(kind, previous.transparency);
+          pane.style.zIndex=previous.zIndex;
+          pane.style.mixBlendMode=previous.blend;
+        }
+      } else {
+        const participating=kind===upper||kind===lower;
+        if (participating) layers[kind].addTo(map); else map.removeLayer(layers[kind]);
+        pane.style.zIndex=kind===upper?'420':'400';
+        pane.style.mixBlendMode=mode==='overlap'&&kind===upper?document.getElementById('overlap-blend').value:'normal';
+        setTransparency(kind, mode==='swipe'?0:stackSnapshot[kind].transparency);
+      }
+      const slider=document.getElementById('alpha-'+kind);
+      slider.disabled=mode==='swipe'||(mode==='overlap'&&kind!==upper&&kind!==lower);
+    }
+    // Comparison owns raster visibility; AOI remains independent in the layer menu.
+    syncComparisonInputs();
+    if (mode==='stack') stackSnapshot=null;
+    if (mode==='swipe') {
+      swipeControl=L.control.sideBySide(layers[upper],layers[lower],{padding:0,thumbSize:0}).addTo(map);
+      const range=swipeControl.getContainer().querySelector('input');
+      range.setAttribute('aria-label','Layer swipe position');
+      range.title=layerNames[upper]+' / '+layerNames[lower];
+    }
+    updateLegend();
+  }
+  comparisonMode.addEventListener('change',configureComparison);
+  upperSelect.addEventListener('change',configureComparison);
+  lowerSelect.addEventListener('change',configureComparison);
+  document.getElementById('overlap-blend').addEventListener('change',()=>{
+    if (comparisonMode.value==='overlap') map.getPane(upperSelect.value).style.mixBlendMode=document.getElementById('overlap-blend').value;
+  });
+  if (typeof L.control.sideBySide!=='function') {
+    comparisonMode.querySelector('[value="swipe"]').disabled=true;
+    comparisonMode.title='Swipe library unavailable; reload to retry';
+  }
+  map.on('resize',()=>{ if (swipeControl) map.fire('move'); });
+
+  const measurements=L.featureGroup().addTo(map);
+  map.createPane('measurements').style.zIndex='460';
+  let nextMeasurementId=1;
+  let drawingHandler=null;
+  function distanceText(metres) {
+    return metres>=1000?(metres/1000).toLocaleString(undefined,{maximumFractionDigits:3})+' km':metres.toLocaleString(undefined,{maximumFractionDigits:1})+' m';
+  }
+  function areaText(squareMetres) {
+    if (squareMetres>=1000000) return (squareMetres/1000000).toLocaleString(undefined,{maximumFractionDigits:3})+' km\u00b2';
+    if (squareMetres>=10000) return (squareMetres/10000).toLocaleString(undefined,{maximumFractionDigits:3})+' ha';
+    return squareMetres.toLocaleString(undefined,{maximumFractionDigits:1})+' m\u00b2';
+  }
+  function updateMeasurement(layer) {
+    const feature=layer.toGeoJSON();
+    const properties=layer.feature?.properties||{measurement_id:nextMeasurementId++};
+    if (feature.geometry.type==='Polygon') {
+      properties.area_m2=turf.area(feature);
+      properties.perimeter_m=turf.length(turf.polygonToLine(feature),{units:'kilometers'})*1000;
+      properties.kind='Area';
+      properties.label=areaText(properties.area_m2);
+    } else {
+      properties.length_m=turf.length(feature,{units:'kilometers'})*1000;
+      properties.kind='Distance';
+      properties.label=distanceText(properties.length_m);
+    }
+    properties.method='Turf 7.2.0 geodesic horizontal measurement on WGS84';
+    feature.properties=properties;
+    layer.feature=feature;
+    if (layer.getTooltip()) layer.setTooltipContent(properties.label);
+    else layer.bindTooltip(properties.label,{permanent:true,direction:'center',className:'measurement-label'});
+    const extra=properties.kind==='Area'?'<br>Perimeter: '+distanceText(properties.perimeter_m):'';
+    layer.bindPopup('<strong>'+properties.kind+' '+properties.measurement_id+'</strong><br>'+properties.label+extra);
+  }
+  function updateMeasurementList() {
+    const drawn=measurements.getLayers();
+    document.getElementById('measurement-results').innerHTML=drawn.map(layer=>{
+      const p=layer.feature.properties;
+      return `<div class="measurement-item"><strong>${p.kind} ${p.measurement_id}: ${p.label}</strong>${p.kind==='Area'?'<br>Perimeter: '+distanceText(p.perimeter_m):''}</div>`;
+    }).join('');
+    document.getElementById('export-measurements').disabled=!drawn.length;
+    document.getElementById('clear-measurements').disabled=!drawn.length;
+  }
+  if (L.Draw&&typeof turf!=='undefined') {
+    const measurementStyle={pane:'measurements',color:'#b33067',weight:2,fillOpacity:.12};
+    function startMeasurement(kind) {
+      if (drawingHandler) drawingHandler.disable();
+      drawingHandler=kind==='area'?new L.Draw.Polygon(map,{allowIntersection:false,showArea:true,metric:true,shapeOptions:measurementStyle}):
+        new L.Draw.Polyline(map,{metric:true,feet:false,showLength:true,shapeOptions:measurementStyle});
+      drawingHandler.enable();
+    }
+    document.getElementById('measure-distance').addEventListener('click',()=>startMeasurement('distance'));
+    document.getElementById('measure-area').addEventListener('click',()=>startMeasurement('area'));
+    const editControl=new L.Control.Draw({position:'topright',draw:false,edit:{featureGroup:measurements}}).addTo(map);
+    const editIcons=[['.leaflet-draw-edit-edit','pencil','Edit measurements'],['.leaflet-draw-edit-remove','trash-2','Delete measurements']];
+    for (const [selector,icon,title] of editIcons) {
+      const button=editControl.getContainer().querySelector(selector);
+      if (!button) continue;
+      button.innerHTML=`<i data-lucide="${icon}"></i>`;
+      button.title=title; button.setAttribute('aria-label',title);
+    }
+    if (typeof lucide!=='undefined') lucide.createIcons();
+    map.on(L.Draw.Event.CREATED,e=>{
+      updateMeasurement(e.layer); measurements.addLayer(e.layer); updateMeasurementList();
+      document.getElementById('measurement-tools').open=true;
+    });
+    map.on(L.Draw.Event.EDITED,e=>{ e.layers.eachLayer(updateMeasurement); updateMeasurementList(); });
+    map.on(L.Draw.Event.DELETED,updateMeasurementList);
+    map.on('draw:editstart draw:deletestart',()=>{
+      document.getElementById('clear-measurements').disabled=true;
+      document.getElementById('export-measurements').disabled=true;
+      document.getElementById('measure-distance').disabled=true;
+      document.getElementById('measure-area').disabled=true;
+    });
+    map.on('draw:editstop draw:deletestop',()=>{
+      updateMeasurementList();
+      document.getElementById('measure-distance').disabled=false;
+      document.getElementById('measure-area').disabled=false;
+    });
+  } else {
+    document.getElementById('measure-distance').disabled=true;
+    document.getElementById('measure-area').disabled=true;
+    document.getElementById('measurement-results').textContent='Measurement library unavailable. Reload to retry.';
+  }
+  document.getElementById('clear-measurements').addEventListener('click',()=>{
+    if (drawingHandler) drawingHandler.disable();
+    measurements.clearLayers(); updateMeasurementList();
+  });
+  document.getElementById('export-measurements').addEventListener('click',()=>{
+    const collection=measurements.toGeoJSON();
+    collection.name='Mohanpura drone survey map measurements';
+    collection.survey_revision=survey.revision;
+    const url=URL.createObjectURL(new Blob([JSON.stringify(collection,null,2)],{type:'application/geo+json'}));
+    const link=document.createElement('a'); link.href=url; link.download='Mohanpura_Map_Measurements.geojson';
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
   function fitAoi() { map.fitBounds(aoi.getBounds(), {padding:[28,28], maxZoom:14}); }
   document.getElementById('fit-aoi').addEventListener('click',fitAoi);
   document.getElementById('reset-layers').addEventListener('click', () => {
+    comparisonMode.value='stack'; configureComparison();
+    upperSelect.value='ortho'; lowerSelect.value='hillshade';
+    document.getElementById('overlap-blend').value='normal';
+    configureComparison();
     for (const kind of ['dem','hillshade','ortho']) {
       layers[kind].addTo(map).setOpacity(1-initialTransparency[kind]/100);
       document.getElementById('alpha-'+kind).value=initialTransparency[kind];
