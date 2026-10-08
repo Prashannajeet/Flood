@@ -52,6 +52,8 @@ with drone_tab:
     terrain_file = APP_DIR / "drone_terrain.html"
     if manifest_file.exists() and terrain_file.exists():
         manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+        pmf_file = APP_DIR / "static" / "drone_pmf" / "manifest.json"
+        manifest["pmf"] = json.loads(pmf_file.read_text(encoding="utf-8")) if pmf_file.exists() else None
         terrain_html = terrain_file.read_text(encoding="utf-8")
         terrain_html = terrain_html.replace("__DRONE_MANIFEST__", json.dumps(manifest).replace("<", "\\u003c"))
         terrain_html = terrain_html.replace("__MAPBOX_TOKEN__", mapbox_token)

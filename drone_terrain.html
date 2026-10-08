@@ -140,6 +140,24 @@ if (typeof L === 'undefined') {
   const aoi = L.geoJSON(survey.aoi, {pane:'aoi', style:{color:'#b32969', weight:1.8, opacity:1, fill:false}}).addTo(map);
   aoi.bindPopup('Mohanpura survey AOI');
   const overlays = {'1. Ortho':layers.ortho, '2. Hillshade':layers.hillshade, '3. DEM':layers.dem, 'Survey AOI':aoi};
+  const pmf=survey.pmf;
+  let floodLayer=null;
+  if (pmf) {
+    map.createPane('pmf').style.zIndex='440';
+    map.getPane('pmf').style.pointerEvents='none';
+    const availableFlood=new Set(pmf.availableTiles);
+    floodLayer=L.tileLayer('app/static/drone_pmf/depth/{z}/{x}/{y}.png',{
+      pane:'pmf',minNativeZoom:pmf.minZoom,maxNativeZoom:pmf.maxNativeZoom,maxZoom:20,
+      opacity:.5,errorTileUrl:transparentTile,attribution:'Mohanpura PMF preliminary model'
+    });
+    const floodUrl=floodLayer.getTileUrl.bind(floodLayer);
+    floodLayer.getTileUrl=coords=>availableFlood.has(`${coords.z}/${coords.x}/${coords.y}`)?floodUrl(coords):transparentTile;
+    floodLayer.on('tileerror',()=>{
+      document.getElementById('flood-status').textContent='Flood tiles unavailable. Reload to retry.';
+    });
+    floodLayer.addTo(map);
+    overlays['PMF flood depth']=floodLayer;
+  }
   const layerControl = L.control.layers(baseMaps, overlays, {collapsed:true, position:'topright'}).addTo(map);
   L.control.scale({position:'bottomleft', imperial:false, maxWidth:120}).addTo(map);
   const tools = L.control({position:'topleft'});
@@ -148,7 +166,10 @@ if (typeof L === 'undefined') {
     box.innerHTML='<summary>Layer tools</summary>'+rasterOrder.map(kind => {
       const name=layerNames[kind];
       return `<div class="transparency-row"><label for="alpha-${kind}">${name}<output id="value-${kind}">${initialTransparency[kind]}%</output></label><input id="alpha-${kind}" aria-label="${name} transparency" type="range" min="0" max="100" step="1" value="${initialTransparency[kind]}"></div>`;
-    }).join('')+`<details class="tool-section" id="comparison-tools"><summary>Layer comparison</summary>
+    }).join('')+(pmf?`<details class="tool-section"><summary>PMF flood</summary>
+      <div class="transparency-row"><label for="alpha-pmf">Transparency<output id="value-pmf">50%</output></label><input id="alpha-pmf" aria-label="PMF flood transparency" type="range" min="0" max="100" value="50"></div>
+      <p class="analysis-note" id="flood-status">Preliminary PMF &middot; 30 m model grid</p>
+    </details>`:'')+`<details class="tool-section" id="comparison-tools"><summary>Layer comparison</summary>
       <label class="tool-field" for="comparison-mode">Mode<select id="comparison-mode"><option value="stack">Layer stack</option><option value="swipe">Swipe comparison</option><option value="overlap">Layer overlap</option></select></label>
       <div id="comparison-pair" hidden>
         <label class="tool-field" for="comparison-upper"><span id="upper-label">Left layer</span><select id="comparison-upper">${rasterOrder.map(k=>`<option value="${k}">${layerNames[k]}</option>`).join('')}</select></label>
@@ -195,7 +216,52 @@ if (typeof L === 'undefined') {
     return box;
   };
   legend.addTo(map);
+  let floodLegend=null;
+  if (pmf) {
+    document.getElementById('alpha-pmf').addEventListener('input',e=>{
+      floodLayer.setOpacity(1-Number(e.target.value)/100);
+      document.getElementById('value-pmf').textContent=e.target.value+'%';
+    });
+    floodLegend=L.control({position:'bottomleft'});
+    floodLegend.onAdd=()=>{
+      const box=L.DomUtil.create('div','legend');
+      box.innerHTML=`<div class="legend-title">Mohanpura PMF depth (m)</div><div class="ramp" style="background:linear-gradient(to right,${pmf.palette.join(',')})"></div><div class="ticks"><span>0.01</span><span>5</span><span>10+</span></div><p class="analysis-note">Preliminary maximum inundation</p>`;
+      L.DomEvent.disableClickPropagation(box);
+      return box;
+    };
+    floodLegend.addTo(map);
+    const blockKeys=new Set(pmf.sampleBlocks), blockCache=new Map();
+    let inspectionSequence=0;
+    map.on('click',async e=>{
+      if (!map.hasLayer(floodLayer)||typeof proj4==='undefined'||drawingHandler?.enabled()||document.querySelector('.leaflet-draw-actions[style*="block"]')) return;
+      const sequence=++inspectionSequence;
+      const popup=L.popup().setLatLng(e.latlng).setContent('Reading PMF model cell...').openOn(map);
+      const [x,y]=proj4('EPSG:4326','+proj=utm +zone=43 +datum=WGS84 +units=m +no_defs',[e.latlng.lng,e.latlng.lat]);
+      const g=pmf.grid, col=Math.floor((x-g.left)/g.resolutionM), row=Math.floor((g.top-y)/g.resolutionM);
+      const key=`${Math.floor(row/g.blockSize)}/${Math.floor(col/g.blockSize)}`;
+      const dry='No mapped PMF inundation at this point.<br><small>Outside coverage, nodata, or depth &le; 0.01 m; not a safety determination.</small>';
+      if (col<0||row<0||col>=g.width||row>=g.height||!blockKeys.has(key)) { popup.setContent(dry); return; }
+      try {
+        if (!blockCache.has(key)) {
+          blockCache.set(key,fetch('app/static/drone_pmf/samples/'+key+'.json').then(response=>{
+            if (!response.ok) throw new Error('Sample unavailable');
+            return response.json();
+          }).then(records=>new Map(records.map(record=>[record[0],record.slice(1)]))).catch(error=>{blockCache.delete(key);throw error;}));
+          if (blockCache.size>64) blockCache.delete(blockCache.keys().next().value);
+        }
+        const records=await blockCache.get(key);
+        if (sequence!==inspectionSequence||!map.hasLayer(popup)||!map.hasLayer(floodLayer)) return;
+        const cell=records.get((row%g.blockSize)*g.blockSize+col%g.blockSize);
+        popup.setContent(cell?`<strong>Mohanpura PMF</strong><br>Maximum depth: <strong>${cell[0].toFixed(2)} m</strong><br>Maximum WSE: <strong>${cell[1]===null?'Unavailable':cell[1].toFixed(2)+' m'}</strong><br><small>UTM 43N cell centre: E ${(g.left+(col+.5)*g.resolutionM).toFixed(0)}, N ${(g.top-(row+.5)*g.resolutionM).toFixed(0)} m<br>Native 30 m cell &middot; preliminary model<br>WSE is elevation, not depth. Model vertical datum unverified.<br>Maxima may occur at different times.</small>`:dry);
+      } catch (_) {
+        if (sequence===inspectionSequence&&map.hasLayer(popup)) popup.setContent('PMF cell values could not load. Please retry.');
+      }
+    });
+  }
   function updateLegend() { legend.getContainer().hidden=!map.hasLayer(layers.dem); }
+  map.on('overlayadd overlayremove',()=>{
+    if (floodLegend) floodLegend.getContainer().hidden=!map.hasLayer(floodLayer);
+  });
   map.on('overlayadd overlayremove',updateLegend);
   function setTransparency(kind, value) {
     layers[kind].setOpacity(1-value/100);
@@ -390,6 +456,11 @@ if (typeof L === 'undefined') {
       document.getElementById('value-'+kind).textContent=initialTransparency[kind]+'%';
     }
     aoi.addTo(map); updateLegend(); fitAoi();
+    if (floodLayer) {
+      floodLayer.addTo(map).setOpacity(.5);
+      document.getElementById('alpha-pmf').value=50;
+      document.getElementById('value-pmf').textContent='50%';
+    }
   });
   document.getElementById('fullscreen').addEventListener('click',async () => {
     try {
@@ -412,6 +483,7 @@ if (typeof L === 'undefined') {
   const c=survey.coverage;
   document.getElementById('coverage').textContent=`AOI ${c.aoi_km2.toFixed(2)} km\u00b2 | DEM inside AOI ${c.products.DEM.merged_inside_aoi_km2.toFixed(2)} km\u00b2`;
   document.getElementById('source-content').innerHTML=`<p><strong>R04 working survey &middot; ${survey.sourceDate}</strong><br>Source: UTM 43N (EPSG:32643). Web display: EPSG:3857.</p><p>DEM source: 0.50 m. Ortho source: 0.2053 m. Web tiles: approximately 2 m ground resolution at the highest native zoom.</p><p>Elevation reference: Part 01 project reference; external vertical datum unverified.</p><p>Hillshade: azimuth 315&deg;, altitude 45&deg;, vertical scale 1&times;.</p><p>${survey.limitations}</p>`;
+  if (pmf) document.getElementById('source-content').innerHTML+=`<p><strong>Mohanpura PMF &middot; ${pmf.scenario.hec_ras_plan}</strong><br>${pmf.scenario.model_status}. Native grid: 30 m; wet threshold: &gt; 0.01 m. ${pmf.verticalReference} ${pmf.sampling} Flood depth comes from the model, not subtraction of the R04 drone DEM.</p>`;
   fitAoi();
 }
 </script>
