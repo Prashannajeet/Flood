@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NITA AI | Mohanpura Drone Terrain</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+* { box-sizing:border-box; }
+html, body { margin:0; height:100%; font-family:"Segoe UI",Arial,sans-serif; color:#183b48; background:#f6fbff; }
+body { display:flex; flex-direction:column; }
+.header { padding:12px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; border-bottom:1px solid #d7e4ea; }
+h1 { font-size:18px; margin:0; font-weight:600; }
+.revision { font-size:12px; color:#577480; margin-top:4px; }
+.actions { display:flex; gap:8px; }
+.actions button { width:34px; height:34px; padding:7px; background:#fff; border:1px solid #ccdae2; border-radius:4px; cursor:pointer; color:#235267; }
+.actions button:hover { background:#eef7fc; }
+.actions svg { width:18px; height:18px; }
+#map { flex:1; min-height:480px; background:#e8eef1; }
+.leaflet-control { font-family:"Segoe UI",Arial,sans-serif; }
+.leaflet-control-layers { border:1px solid #d1dfe5 !important; box-shadow:0 2px 6px #173c4820; font-size:13px; }
+.leaflet-control-layers-expanded { padding:10px 12px; }
+.overlay-tools, .legend { background:#fffffff5; border:1px solid #d1dfe5; border-radius:4px; padding:10px 12px; box-shadow:0 2px 6px #173c4820; }
+.overlay-tools { width:212px; }
+.overlay-tools summary { cursor:pointer; font-size:13px; font-weight:600; }
+.transparency-row { margin-top:10px; }
+.transparency-row label { display:flex; justify-content:space-between; font-size:12px; }
+input[type=range] { display:block; width:100%; height:18px; margin:3px 0 0; accent-color:#237f95; cursor:pointer; }
+.legend { width:215px; font-size:12px; }
+.legend-title { font-weight:600; margin-bottom:7px; }
+.ramp { height:12px; border:1px solid #52647040; }
+.ticks { display:flex; justify-content:space-between; font-size:11px; margin-top:4px; }
+.status { padding:7px 16px; font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px 18px; background:#fff; border-top:1px solid #d7e4ea; }
+.source-details { position:relative; }
+.source-details summary { cursor:pointer; color:#38687a; }
+.source-details .content { position:absolute; bottom:25px; right:0; width:350px; max-width:88vw; padding:14px; background:#fff; border:1px solid #cbdce4; border-radius:4px; box-shadow:0 4px 20px #173c4826; z-index:1000; line-height:1.5; }
+.source-details p { margin:0 0 9px; }
+.source-details p:last-child { margin-bottom:0; }
+#loading { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1200; background:#fff; border:1px solid #cbdce4; padding:16px; font-size:13px; }
+.map-label { font-size:12px; font-weight:600; color:#a32f67; text-shadow:-.5px -.5px 0 #fff,.5px -.5px 0 #fff,-.5px .5px 0 #fff,.5px .5px 0 #fff; white-space:nowrap; }
+@media(max-width:600px) { .header { padding:9px 10px; } h1 { font-size:15px; } .revision { font-size:11px; } .overlay-tools { width:175px; padding:8px; } .legend { width:175px; padding:8px; } .status { padding:6px 10px; font-size:11px; } #map { min-height:430px; } }
+</style>
+</head>
+<body>
+<header class="header">
+  <div><h1>Mohanpura Drone Terrain</h1><div class="revision">NITA AI &middot; Flights 01&ndash;27 &middot; R04</div></div>
+  <div class="actions">
+    <button id="fit-aoi" title="Zoom to AOI" aria-label="Zoom to AOI"><i data-lucide="focus"></i></button>
+    <button id="reset-layers" title="Reset layers and transparency" aria-label="Reset layers and transparency"><i data-lucide="rotate-ccw"></i></button>
+    <button id="fullscreen" title="Full screen" aria-label="Full screen"><i data-lucide="maximize"></i></button>
+  </div>
+</header>
+<main id="map" aria-label="Drone terrain map"></main>
+<div id="loading" role="status">Loading drone survey layers&hellip;</div>
+<footer class="status">
+  <span id="coordinates">UTM 43N &middot; WGS 84</span>
+  <span id="coverage"></span>
+  <details class="source-details"><summary>Survey details</summary><div class="content" id="source-content"></div></details>
+</footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script>
+'use strict';
+const survey = __DRONE_MANIFEST__;
+const mapboxToken = '__MAPBOX_TOKEN__';
+const loading = document.getElementById('loading');
+if (typeof lucide!=='undefined') lucide.createIcons();
+if (typeof L === 'undefined') {
+  loading.textContent = 'Map library could not load. Check your internet connection and reload.';
+} else {
+  const map = L.map('map', {scrollWheelZoom:true, wheelPxPerZoomLevel:60, wheelDebounceTime:40, minZoom:8, maxZoom:20});
+  const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+  const grey = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {attribution:'Tiles &copy; Esri', maxNativeZoom:16, maxZoom:20});
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution:'Tiles &copy; Esri', maxZoom:20});
+  const baseMaps = {'Grey':grey, 'Satellite':satellite};
+  let defaultBase = grey;
+  if (mapboxToken) {
+    const outdoor = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/256/{z}/{x}/{y}?access_token='+encodeURIComponent(mapboxToken), {attribution:attribution+' &copy; Mapbox', maxZoom:20});
+    baseMaps['Mapbox Outdoors'] = outdoor;
+    defaultBase = outdoor;
+  }
+  defaultBase.addTo(map);
+  // Empty tiles use a transparent local placeholder, including unsurveyed AOI gaps.
+  const emptyCanvas = document.createElement('canvas'); emptyCanvas.width=1; emptyCanvas.height=1;
+  const transparentTile = emptyCanvas.toDataURL();
+  const layers = {};
+  const initialTransparency = {dem:0, hillshade:60, ortho:50};
+  let tileErrorCount = 0;
+  for (const [index, kind] of ['dem','hillshade','ortho'].entries()) {
+    map.createPane(kind).style.zIndex = String(400+index*10);
+    if (kind === 'hillshade') map.getPane(kind).style.mixBlendMode = 'multiply';
+    const available = new Set(survey.availableTiles[kind]);
+    const layer = L.tileLayer('/app/static/drone_terrain/'+kind+'/{z}/{x}/{y}.png', {
+      pane:kind, minNativeZoom:survey.minZoom, maxNativeZoom:survey.maxNativeZoom,
+      maxZoom:20, opacity:1-initialTransparency[kind]/100, errorTileUrl:transparentTile,
+      attribution:'NITA AI drone survey R04', keepBuffer:2
+    });
+    const originalUrl = layer.getTileUrl.bind(layer);
+    layer.getTileUrl = function(coords) {
+      return available.has(`${coords.z}/${coords.x}/${coords.y}`) ? originalUrl(coords) : transparentTile;
+    };
+    layer.on('tileerror', () => {
+      tileErrorCount++;
+      loading.hidden=false;
+      loading.textContent='Survey tiles could not load. Reload the app or check the deployment assets.';
+    });
+    layer.on('load', () => { if (!tileErrorCount) loading.hidden=true; });
+    layers[kind]=layer.addTo(map);
+  }
+  map.createPane('aoi').style.zIndex='450';
+  const aoi = L.geoJSON(survey.aoi, {pane:'aoi', style:{color:'#b32969', weight:1.8, opacity:1, fill:false}}).addTo(map);
+  aoi.bindPopup('Mohanpura survey AOI');
+  const overlays = {'Survey AOI':aoi, 'DEM elevation':layers.dem, 'Hillshade terrain':layers.hillshade, 'Orthomosaic':layers.ortho};
+  L.control.layers(baseMaps, overlays, {collapsed:true, position:'topright'}).addTo(map);
+  L.control.scale({position:'bottomleft', imperial:false, maxWidth:120}).addTo(map);
+  const tools = L.control({position:'topleft'});
+  tools.onAdd = function() {
+    const box = L.DomUtil.create('details','overlay-tools'); box.open=true;
+    box.innerHTML='<summary>Layer transparency</summary>'+['dem','hillshade','ortho'].map(kind => {
+      const name={dem:'DEM',hillshade:'Hillshade',ortho:'Ortho'}[kind];
+      return `<div class="transparency-row"><label for="alpha-${kind}">${name}<output id="value-${kind}">${initialTransparency[kind]}%</output></label><input id="alpha-${kind}" aria-label="${name} transparency" type="range" min="0" max="100" step="1" value="${initialTransparency[kind]}"></div>`;
+    }).join('');
+    L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box);
+    return box;
+  };
+  tools.addTo(map);
+  for (const kind of ['dem','hillshade','ortho']) {
+    document.getElementById('alpha-'+kind).addEventListener('input', e => {
+      const value=Number(e.target.value);
+      layers[kind].setOpacity(1-value/100);
+      document.getElementById('value-'+kind).textContent=value+'%';
+    });
+  }
+  const legend = L.control({position:'bottomright'});
+  legend.onAdd = function() {
+    const box=L.DomUtil.create('div','legend');
+    const [low,high]=survey.elevationRangeM;
+    box.innerHTML=`<div class="legend-title">DEM elevation (m)</div><div class="ramp" style="background:linear-gradient(to right,${survey.palette.join(',')})"></div><div class="ticks"><span>${low}</span><span>${(low+high)/2}</span><span>${high}</span></div>`;
+    L.DomEvent.disableClickPropagation(box);
+    return box;
+  };
+  legend.addTo(map);
+  function updateLegend() { legend.getContainer().hidden=!map.hasLayer(layers.dem); }
+  map.on('overlayadd overlayremove',updateLegend);
+  function fitAoi() { map.fitBounds(aoi.getBounds(), {padding:[28,28], maxZoom:14}); }
+  document.getElementById('fit-aoi').addEventListener('click',fitAoi);
+  document.getElementById('reset-layers').addEventListener('click', () => {
+    for (const kind of ['dem','hillshade','ortho']) {
+      layers[kind].addTo(map).setOpacity(1-initialTransparency[kind]/100);
+      document.getElementById('alpha-'+kind).value=initialTransparency[kind];
+      document.getElementById('value-'+kind).textContent=initialTransparency[kind]+'%';
+    }
+    aoi.addTo(map); updateLegend(); fitAoi();
+  });
+  document.getElementById('fullscreen').addEventListener('click',async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch (_) { document.getElementById('fullscreen').title='Full screen is unavailable in this browser'; }
+  });
+  document.addEventListener('fullscreenchange',()=>map.invalidateSize());
+  let initialFit=false;
+  new ResizeObserver(entries=>{
+    if (entries[0].contentRect.width<=0) return;
+    map.invalidateSize();
+    if (!initialFit) { fitAoi(); initialFit=true; }
+  }).observe(document.getElementById('map'));
+  map.on('mousemove', e => {
+    if (typeof proj4==='undefined') return;
+    const [east,north]=proj4('EPSG:4326','+proj=utm +zone=43 +datum=WGS84 +units=m +no_defs',[e.latlng.lng,e.latlng.lat]);
+    document.getElementById('coordinates').textContent=`UTM 43N | E ${east.toFixed(1)} m | N ${north.toFixed(1)} m`;
+  });
+  const c=survey.coverage;
+  document.getElementById('coverage').textContent=`AOI ${c.aoi_km2.toFixed(2)} km\u00b2 | DEM inside AOI ${c.products.DEM.merged_inside_aoi_km2.toFixed(2)} km\u00b2`;
+  document.getElementById('source-content').innerHTML=`<p><strong>R04 working survey &middot; ${survey.sourceDate}</strong><br>Source: UTM 43N (EPSG:32643). Web display: EPSG:3857.</p><p>DEM source: 0.50 m. Ortho source: 0.2053 m. Web tiles: approximately 2 m ground resolution at the highest native zoom.</p><p>Elevation reference: Part 01 project reference; external vertical datum unverified.</p><p>Hillshade: azimuth 315&deg;, altitude 45&deg;, vertical scale 1&times;.</p><p>${survey.limitations}</p>`;
+  fitAoi();
+}
+</script>
+</body>
+</html>
