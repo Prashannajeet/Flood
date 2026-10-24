@@ -6,9 +6,8 @@ Streamlit deployment package for the NITA AI branded GIS dashboard.
 
 - Main file path: `streamlit_app.py`
 - Requirements file: `requirements.txt`
-- Add app secret: `MAPBOX_TOKEN`
 
-The dashboard is embedded from `dashboard.html`; the Mapbox token is injected from Streamlit secrets at runtime.
+The dashboard is embedded from `dashboard.html` and uses public basemaps that do not require an API key.
 
 ## Dashboard pages
 
@@ -16,7 +15,7 @@ The dashboard is embedded from `dashboard.html`; the Mapbox token is injected fr
 - **Drone Terrain** uses `drone_terrain.html` with the R04 Mohanpura flights 01-27 survey.
   The final survey AOI, DEM, hillshade and orthomosaic are enabled initially.
   Orthomosaic transparency starts at 50%; each raster has a 0-100% transparency slider.
-  Grey and satellite basemaps are available, with Mapbox Outdoors when configured.
+  CARTO Light, CARTO Voyager, OpenStreetMap and OpenTopoMap basemaps are available without an API key.
 
 The raster stack and layer menu run top to bottom: **Ortho, Hillshade, DEM**.
 The AOI remains above the rasters. Layer tools include a selected-pair swipe view,

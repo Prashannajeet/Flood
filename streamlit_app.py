@@ -1,4 +1,3 @@
-import os
 import json
 from pathlib import Path
 
@@ -38,12 +37,7 @@ if not DASHBOARD_FILE.exists():
     st.error("dashboard.html was not found in the app repository.")
     st.stop()
 
-mapbox_token = os.environ.get("MAPBOX_TOKEN", "")
-try:
-    mapbox_token = st.secrets.get("MAPBOX_TOKEN", mapbox_token)
-except st.errors.StreamlitSecretNotFoundError:
-    pass
-html = DASHBOARD_FILE.read_text(encoding="utf-8").replace("__MAPBOX_TOKEN__", mapbox_token)
+html = DASHBOARD_FILE.read_text(encoding="utf-8")
 dashboard_tab, drone_tab = st.tabs(["Flood & Hydrology", "Drone Terrain"])
 with dashboard_tab:
     components.html(html, height=940, scrolling=False)
@@ -56,7 +50,6 @@ with drone_tab:
         manifest["pmf"] = json.loads(pmf_file.read_text(encoding="utf-8")) if pmf_file.exists() else None
         terrain_html = terrain_file.read_text(encoding="utf-8")
         terrain_html = terrain_html.replace("__DRONE_MANIFEST__", json.dumps(manifest).replace("<", "\\u003c"))
-        terrain_html = terrain_html.replace("__MAPBOX_TOKEN__", mapbox_token)
         components.html(terrain_html, height=820, scrolling=False)
     else:
         st.error("The drone survey layer package is unavailable.")

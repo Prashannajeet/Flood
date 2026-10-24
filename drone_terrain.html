@@ -89,7 +89,6 @@ input[type=range] { display:block; width:100%; height:18px; margin:3px 0 0; acce
 <script>
 'use strict';
 const survey = __DRONE_MANIFEST__;
-const mapboxToken = '__MAPBOX_TOKEN__';
 const loading = document.getElementById('loading');
 if (typeof lucide!=='undefined') lucide.createIcons();
 if (typeof L === 'undefined') {
@@ -97,16 +96,11 @@ if (typeof L === 'undefined') {
 } else {
   const map = L.map('map', {scrollWheelZoom:true, wheelPxPerZoomLevel:60, wheelDebounceTime:40, minZoom:8, maxZoom:20});
   const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-  const grey = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {attribution:'Tiles &copy; Esri', maxNativeZoom:16, maxZoom:20});
-  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution:'Tiles &copy; Esri', maxZoom:20});
-  const baseMaps = {'Grey':grey, 'Satellite':satellite};
-  let defaultBase = grey;
-  if (mapboxToken) {
-    const outdoor = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/256/{z}/{x}/{y}?access_token='+encodeURIComponent(mapboxToken), {attribution:attribution+' &copy; Mapbox', maxZoom:20});
-    baseMaps['Mapbox Outdoors'] = outdoor;
-    defaultBase = outdoor;
-  }
-  defaultBase.addTo(map);
+  const grey = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {attribution:attribution+' &copy; CARTO', maxZoom:20}).addTo(map);
+  const voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {attribution:attribution+' &copy; CARTO', maxZoom:20});
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:attribution, maxZoom:19});
+  const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {attribution:attribution+' | Map style &copy; OpenTopoMap', maxZoom:17});
+  const baseMaps = {'CARTO Light':grey, 'CARTO Voyager':voyager, 'OpenStreetMap':osm, 'OpenTopoMap':topo};
   // Empty tiles use a transparent local placeholder, including unsurveyed AOI gaps.
   const emptyCanvas = document.createElement('canvas'); emptyCanvas.width=1; emptyCanvas.height=1;
   const transparentTile = emptyCanvas.toDataURL();

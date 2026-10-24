@@ -340,22 +340,15 @@ map.getContainer().addEventListener('wheel', event => {
   event.preventDefault();
   event.stopPropagation();
 }, { passive:false });
-const mapboxToken = '__MAPBOX_TOKEN__';
-const mapboxOutdoors = L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`, { maxZoom:19, tileSize:256, attribution:'&copy; Mapbox &copy; OpenStreetMap' }).addTo(map);
 const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap contributors' });
 const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom:17, attribution:'&copy; OpenTopoMap contributors' });
-const grayMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap &copy; CARTO' });
-const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Tiles &copy; Esri' });
-const hybridImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Tiles &copy; Esri' });
-const hybridLabels = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Labels &copy; Esri' });
-const hybrid = L.layerGroup([hybridImagery, hybridLabels]);
+const grayMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:20, attribution:'&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map);
+const voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, attribution:'&copy; OpenStreetMap contributors &copy; CARTO' });
 const baseMaps = {
-  'Mapbox Outdoors': mapboxOutdoors,
+  'CARTO Light': grayMap,
+  'CARTO Voyager': voyager,
   'Street map': osm,
-  'Terrain map': topo,
-  'Grey basemap': grayMap,
-  'Satellite': satellite,
-  'Hybrid satellite': hybrid
+  'Terrain map': topo
 };
 const overlayMaps = {};
 const allLayerGroup = L.featureGroup();
@@ -795,7 +788,7 @@ function updateTables() {
     lt.appendChild(tr);
   });
   const rfText = payload.rainfallRdbms ? ` Rainfall RDBMS: ${payload.rainfallRdbms.station_count} stations, ${payload.rainfallRdbms.daily_row_count.toLocaleString()} daily rows.` : '';
-  document.getElementById('layerNote').textContent = `${payload.gisLayers.length} GIS overlays loaded from the Shape Files folder. Vector overlays are normalized to WGS84 for web display; Kundaliya flood rasters are sourced from UTM 43N (EPSG:32643) and rendered in Web Mercator (EPSG:3857) for Google/Mapbox alignment. ${floodInundationLayers.length} flood inundation overlays available.${rfText}`;
+  document.getElementById('layerNote').textContent = `${payload.gisLayers.length} GIS overlays loaded from the Shape Files folder. Vector overlays are normalized to WGS84 for web display; Kundaliya flood rasters are sourced from UTM 43N (EPSG:32643) and rendered in Web Mercator (EPSG:3857) for web-basemap alignment. ${floodInundationLayers.length} flood inundation overlays available.${rfText}`;
 
   const stBody = document.getElementById('siteTable');
   stBody.innerHTML = '';
